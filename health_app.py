@@ -7,14 +7,14 @@ import datetime
 st.set_page_config(page_title="아율·아인·혁 건강기록", page_icon="🌡️")
 st.title("🌡️ 우리 아이 건강 관리")
 
-# 2. 구글 시트 연결 (서비스 계정 설정 반영)
-# Secrets에 넣은 service_account 정보를 사용하여 연결합니다.
+# 2. 구글 시트 연결 (서비스 계정 자동 인식)
+# Streamlit이 Secrets에 있는 service_account 정보를 자동으로 사용합니다.
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # 3. 데이터 불러오기
 try:
-    # 데이터가 없을 경우를 대비해 columns를 명확히 지정
     df = conn.read(ttl=0)
+    # 시트가 비어있을 경우를 대비해 컬럼 설정
     if df.empty:
         df = pd.DataFrame(columns=["일시", "이름", "체온", "약 종류", "용량", "특이사항"])
 except Exception:
@@ -40,7 +40,7 @@ with st.form("health_form", clear_on_submit=True):
     note = st.text_area("특이사항", placeholder="예: 기침이 심함, 약 먹고 바로 잠듦")
     submit = st.form_submit_button("💾 기록 저장 및 공유")
 
-# 5. 저장 로직 (서비스 계정 권한으로 실행)
+# 5. 저장 로직 (강력한 서비스 계정 권한 사용)
 if submit:
     full_datetime = recorded_at.strftime('%Y-%m-%d %H:%M')
     new_row = {
@@ -53,16 +53,17 @@ if submit:
     }
     
     try:
-        # 기존 데이터에 한 줄 추가하여 전체 업데이트
+        # 기존 데이터에 한 줄 추가
         updated_df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+        # 구글 시트에 업데이트 (서비스 계정 권한으로 실행)
         conn.update(data=updated_df)
         
-        st.success(f"✅ {name}의 기록이 저장되었습니다! ({full_datetime})")
+        st.success(f"✅ {name}의 기록이 저장되었습니다!")
         st.rerun()
     except Exception as e:
-        st.error(f"저장에 실패했습니다. 시트 공유 설정에 서비스 계정 이메일이 편집자로 들어갔는지 확인해주세요.")
-        # 에러 로그를 살짝 보여주면 디버깅에 도움이 됩니다.
-        st.info("로그 확인용: 서비스 계정 이메일이 시트에 초대되었는지 꼭 확인해주세요!")
+        # 에러 발생 시 Secrets 설정 확인 메시지 출력
+        st.error("저장에 실패했습니다. Secrets의 service_account 설정 형식을 확인해주세요.")
+        st.info("Tip: service_account = ''' { JSON내용 } ''' 형식이 맞는지 꼭 확인하세요!")
 
 # 6. 최근 기록 표시
 st.divider()
