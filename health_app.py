@@ -4,68 +4,85 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 커서 '투명인간' CSS 트릭 적용
+# 1. 페이지 설정 및 디자인 고도화
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
     <style>
-    /* 전체 배경 강제 다크 고정 */
+    /* 1. 전체 배경 및 기본 텍스트 설정 (다크 모드 강제 고정) */
     .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
         background-color: #0d1117 !important;
         color: #ffffff !important;
     }
 
-    /* [커서 박멸 핵심 트릭] */
-    /* 1. 입력창의 실제 글자색(Color)을 투명(Transparent)하게 만듭니다 -> 커서도 같이 투명해짐 */
-    /* 2. text-shadow(글자 그림자)를 흰색으로 설정해, 그림자가 글씨처럼 보이게 합니다. */
-    input, textarea, select, div[role="combobox"] input {
+    /* -----------------------------------------------------------------
+       [커서 박멸 솔루션] 
+       1. 실제 입력 텍스트(input)의 색상을 '투명'으로 만듭니다. (커서도 같이 투명해짐)
+       2. text-shadow로 글자 모양만 흰색으로 다시 그려냅니다.
+       3. caret-color: transparent로 커서 색상을 아예 없앱니다.
+    ----------------------------------------------------------------- */
+    input, textarea, select {
         color: transparent !important;
         text-shadow: 0 0 0 #ffffff !important;
         caret-color: transparent !important;
         cursor: pointer !important;
     }
     
-    /* 플레이스홀더(안내 문구) 처리 */
+    /* 검색창 내부 입력 요소도 동일하게 처리 */
+    div[role="combobox"] input {
+        color: transparent !important;
+        text-shadow: 0 0 0 #ffffff !important;
+        caret-color: transparent !important;
+    }
+
+    /* 플레이스홀더(안내 문구)는 그림자 없이 회색으로 */
     ::placeholder {
         color: #aaaaaa !important;
         text-shadow: none !important;
     }
 
-    /* 입력창 배경 제거 및 단일 테두리 */
+    /* -----------------------------------------------------------------
+       [테두리 단일화 솔루션]
+       내부의 모든 테두리를 없애고, 가장 바깥쪽 컨테이너에만 테두리를 줍니다.
+    ----------------------------------------------------------------- */
+    
+    /* 1. 가장 바깥쪽 컨테이너에만 흰색 테두리 적용 */
     div[data-baseweb="select"], 
     div[data-baseweb="input"], 
     div[data-baseweb="base-input"], 
-    div[data-baseweb="textarea"],
-    input, textarea, select {
+    div[data-baseweb="textarea"] {
         background-color: transparent !important;
         border: 1px solid #ffffff !important;
         border-radius: 8px !important;
         box-shadow: none !important;
     }
 
-    /* 중복 테두리 제거 */
-    div[data-baseweb="select"] > div, 
-    div[data-baseweb="base-input"] > div,
-    .stSelectbox div, .stNumberInput div, .stTextInput div {
+    /* 2. 내부 요소들의 테두리 및 배경 싹 다 제거 (겹침 방지) */
+    div[data-baseweb="select"] *, 
+    div[data-baseweb="input"] *, 
+    div[data-baseweb="base-input"] * {
         border: none !important;
         background-color: transparent !important;
     }
 
-    /* 모바일 터치 하이라이트 제거 */
+    /* 3. 모바일 터치 시 발생하는 파란색/회색 박스 제거 */
     * { -webkit-tap-highlight-color: transparent !important; }
 
-    /* 상세 기록 표 스타일 */
+    /* -----------------------------------------------------------------
+       [기타 요소 디자인]
+    ----------------------------------------------------------------- */
+
+    /* 상세 기록 표 디자인 (단일 테두리) */
     [data-testid="stDataFrame"], [data-testid="stTable"], .stDataFrame {
-        background-color: transparent !important;
         border: 1px solid #ffffff !important;
+        background-color: transparent !important;
     }
     [data-testid="stTable"] td, [data-testid="stTable"] th {
-        background-color: transparent !important;
-        color: #ffffff !important;
         border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+        color: #ffffff !important;
     }
 
-    /* 버튼 스타일 */
+    /* 저장 버튼 (초록색 + 흰색 테두리) */
     .stButton > button {
         background-color: #238636 !important;
         color: #ffffff !important;
@@ -74,21 +91,20 @@ st.markdown("""
         border-radius: 8px !important;
         height: 3.5em !important;
         width: 100% !important;
-        text-shadow: none !important; /* 버튼 글자는 정상적으로 */
+        text-shadow: none !important; /* 버튼 글자는 그림자 효과 제외 */
     }
 
-    /* 라벨 텍스트 */
+    /* 숫자 입력기(+/-) 버튼도 단일 테두리 느낌으로 */
+    div[data-testid="stNumberInputStepDown"], 
+    div[data-testid="stNumberInputStepUp"] {
+        border: none !important; /* 내부 테두리 제거 */
+        background-color: rgba(255,255,255,0.1) !important; /* 살짝 배경을 줘서 구분 */
+    }
+
+    /* 라벨 텍스트 흰색 */
     label, p, span, [data-testid="stWidgetLabel"] p {
         color: #ffffff !important;
         font-weight: bold !important;
-    }
-    
-    /* 숫자 입력기 테두리 */
-    div[data-testid="stNumberInputStepDown"], 
-    div[data-testid="stNumberInputStepUp"] {
-        background-color: transparent !important;
-        border: 1px solid #ffffff !important;
-        color: #ffffff !important;
     }
     </style>
     """, unsafe_allow_html=True)
