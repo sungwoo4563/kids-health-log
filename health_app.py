@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import datetime
 import os
+import plotly.graph_objects as go
 
 # 1. 페이지 설정
 st.set_page_config(page_title="아율·아인·혁 건강기록", page_icon="🌡️", layout="wide")
@@ -36,7 +37,7 @@ def save_data(df): df.to_csv(DATA_FILE, index=False, encoding='utf-8-sig')
 
 if 'df' not in st.session_state: st.session_state.df = load_data()
 
-# 3. 입력 폼 (생략 - 기존 로직 유지)
+# 3. 입력 폼 (기존 동일)
 now = datetime.datetime.now()
 with st.expander("📝 새로운 기록 추가하기", expanded=False):
     with st.form("health_form", clear_on_submit=True):
@@ -92,58 +93,74 @@ for i, c_name in enumerate(child_names):
             st.markdown(f'<div class="status-card {bg}"><div><div class="card-header">{child_icons[c_name]} {c_name}</div><div class="card-temp">{t}°C</div><div class="card-delta">{delta_prefix} {abs(diff)}°C</div></div><div class="card-footer">🕒 {latest["날짜"]} {latest["시간"]}</div></div>', unsafe_allow_html=True)
         else: st.info(f"{c_name}: 기록 없음")
 
-# 5. 아이별 그래프 (복구 및 디자인 강화)
+# 5. 아이별 그래프 (Plotly 사용)
 st.subheader("📈 최근 체온 흐름")
 g_cols = st.columns(3)
 
-def prepare_chart_data(df):
-    if df.empty: return df
-    chart_df = df.tail(7).copy()
-    chart_df['심플날짜'] = chart_df['날짜'].str.split('.').str[1:].str.join('.') + "일"
-    chart_df['심플시간'] = chart_df['시간'].str.split(' ').str[-1]
-    chart_df['시간축'] = chart_df[['심플날짜', '심플시간']].values.tolist()
-    return chart_df
-
 for i, c_name in enumerate(child_names):
     with g_cols[i]:
-        f_df = st.session_state.df[st.session_state.df['이름'] == c_name]
+        f_df = st.session_state.df[st.session_state.df['이름'] == c_name].tail(7)
         if not f_df.empty:
-            st.markdown(f"**{child_icons[c_name]} {c_name} 추세**")
-            chart_data = prepare_chart_data(f_df)
+            # 시간축 가공
+            f_df['시간축'] = f_df['날짜'].str[3:] + "<br>" + f_df['시간'].str.split(' ').str[-1]
+            
             d_limit = 38.0 if c_name == "혁" else 39.0
             
-            # 레이어 순서를 조정하여 선이 가장 잘 보이게 설정
-            st.vega_lite_chart(chart_data, {
-                'height': 220,
-                'layer': [
-                    # 1. 배경 영역 (가장 아래)
-                    {'mark': {'type': 'rect', 'opacity': 0.15},
-                     'encoding': {'y': {'datum': 30}, 'y2': {'datum': 37.5}, 'color': {'value': '#28a745'}}}, # 정상
-                    {'mark': {'type': 'rect', 'opacity': 0.15},
-                     'encoding': {'y': {'datum': 37.5}, 'y2': {'datum': d_limit}, 'color': {'value': '#fd7e14'}}}, # 미열
-                    {'mark': {'type': 'rect', 'opacity': 0.15},
-                     'encoding': {'y': {'datum': d_limit}, 'y2': {'datum': 42}, 'color': {'value': '#dc3545'}}}, # 고열
-                    
-                    # 2. 꺾은선 (흐름 강조)
-                    {'mark': {'type': 'line', 'color': 'white', 'strokeWidth': 3, 'point': {'size': 100, 'fill': 'white'}},
-                     'encoding': {
-                         'x': {'field': '시간축', 'type': 'nominal', 'axis': {'title': None, 'labelAngle': 0}},
-                         'y': {'field': '체온', 'type': 'quantitative', 'scale': {'domain': [30, 42]}, 'axis': None}
-                     }},
-                    
-                    # 3. 텍스트 라벨 (수치 강조)
-                    {'mark': {'type': 'text', 'dy': -20, 'fontSize': 14, 'fontWeight': 'bold', 'color': 'white'},
-                     'encoding': {
-                         'x': {'field': '시간축', 'type': 'nominal'},
-                         'y': {'field': '체온', 'type': 'quantitative'},
-                         'text': {'field': '체온', 'type': 'quantitative', 'format': '.1f'}
-                     }}
-                ],
-                'config': {'view': {'stroke': 'transparent'}}
-            }, use_container_width=True)
-        else: st.info(f"{c_name} 데이터 없음")
+            # 점 색상 결정
+            colors = []
+            for t in f_df['체온']:
+                if t <= 37.5: colors.append('#28a745')
+                elif t < d_limit: colors.append('#fd7e14')
+                else: colors.append('#dc3545')
+
+            fig = go.Figure()
+
+            # 배경 영역 추가
+            fig.add_hrect(y0=30, y1=37.5, fillcolor="#28a745", opacity=0.1, line_width=0)
+            fig.add_hrect(y0=37.5, y1=d_limit, fillcolor="#fd7e14", opacity=0.1, line_width=0)
+            fig.add_hrect(y0=d_limit, y1=42, fillcolor="#dc3545", opacity=0.1, line_width=0)
+
+            # 선과 점 추가
+            fig.add_trace(go.Scatter(
+                x=f_df['시간축'], y=f_df['체온'],
+                mode='lines+markers+text',
+                line=dict(color='white', width=2),
+                marker=dict(color=colors, size=12, line=dict(color='white', width=1)),
+                text=f_df['체온'], textposition="top center",
+                textfont=dict(color="white", size=14, family="Arial Black")
+            ))
+
+            fig.update_layout(
+                height=250, margin=dict(l=10, r=10, t=30, b=10),
+                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                showlegend=False,
+                xaxis=dict(showgrid=False, zeroline=False, color='white', tickfont=dict(size=10)),
+                yaxis=dict(range=[34, 42], showgrid=False, zeroline=False, visible=False)
+            )
+
+            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+        else:
+            st.info(f"{c_name} 데이터 없음")
 
 # 6. 상세 기록 탭
 st.divider()
 tabs = st.tabs(["📋 전체 기록", "💖 아율", "💛 아인", "💙 혁"])
-# ... (상세 기록 표 로직 생략)
+
+for i, tab in enumerate(tabs):
+    n_filter = [None, "아율", "아인", "혁"][i]
+    with tab:
+        f_df = st.session_state.df if n_filter is None else st.session_state.df[st.session_state.df['이름'] == n_filter]
+        if not f_df.empty:
+            d_df = f_df.copy().iloc[::-1]
+            d_df.insert(0, '선택', False)
+            def style_temp(val):
+                color = '#28a745' if val <= 37.5 else '#fd7e14' if val <= 38.9 else '#dc3545'
+                return f'color: {color}; font-weight: bold;'
+            edited = st.data_editor(d_df.style.map(style_temp, subset=['체온']), hide_index=True, use_container_width=True, key=f"ed_{i}", column_config={"선택": st.column_config.CheckboxColumn("삭제")})
+            
+            if st.button(f"🗑️ 선택 삭제", key=f"del_{i}"):
+                to_del = edited[edited['선택'] == True]
+                for _, r in to_del.iterrows():
+                    st.session_state.df = st.session_state.df[~((st.session_state.df['날짜'] == r['날짜']) & (st.session_state.df['시간'] == r['시간']) & (st.session_state.df['이름'] == (r['이름'] if n_filter is None else n_filter)))]
+                save_data(st.session_state.df)
+                st.rerun()
