@@ -8,7 +8,7 @@ st.set_page_config(page_title="아이들 건강 관리", page_icon="🌡️")
 st.title("🌡️ 실시간 아이 건강 기록 (공유형)")
 
 # 구글 스프레드시트 연결 설정
-conn = st.connection("gsheets", type=GSheetConnection)
+conn = st.connection("gsheets", type=GSheetsConnection)
 
 # 기존 데이터 불러오기
 data = conn.read(worksheet="Sheet1", ttl="0s") # 실시간 반영을 위해 캐시 해제
