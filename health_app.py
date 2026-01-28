@@ -4,7 +4,7 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 디자인
+# 1. 페이지 설정 및 디자인 (그래프 대칭 보정 + 기존 디자인 유지)
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
@@ -15,11 +15,11 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* 2. 그래프(Plotly) 액자 디자인 & 중앙 정렬 */
+    /* 2. 그래프(Plotly) 액자 디자인 */
     [data-testid="stPlotlyChart"] {
         border: 2px solid #ffffff !important;
         border-radius: 15px !important;
-        padding: 10px !important; /* 내부 패딩 */
+        padding: 10px !important; /* 내부 패딩을 줄여서 그래프가 더 꽉 차게 */
         background-color: #0d1117 !important;
         margin-bottom: 15px !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
@@ -80,7 +80,6 @@ st.markdown("""
         border: 2px solid #ffffff !important;
         font-weight: bold !important;
         border-radius: 8px !important;
-        height: 3.5em !important;
     }
     
     /* 8. 체온 입력기 통합 테두리 */
@@ -206,17 +205,20 @@ for i, c_name in enumerate(child_names):
             colors = ['#4ade80' if t <= 37.5 else '#fbbf24' if t < d_limit else '#f87171' for t in f_df['체온']]
             
             fig = go.Figure()
+            # 배경 색상 영역 그리기
             fig.add_hrect(y0=34, y1=37.5, fillcolor="#28a745", opacity=0.15, line_width=0)
             fig.add_hrect(y0=37.5, y1=d_limit, fillcolor="#fd7e14", opacity=0.15, line_width=0)
             fig.add_hrect(y0=d_limit, y1=42, fillcolor="#dc3545", opacity=0.15, line_width=0)
+            
             fig.add_trace(go.Scatter(x=f_df['축'], y=f_df['체온'], mode='lines+markers+text', line=dict(color='white', width=2), marker=dict(color=colors, size=10, line=dict(color='white', width=1)), text=f_df['체온'], textposition="top center", textfont=dict(color="white", size=11)))
             
-            # [수정] 그래프 여백 및 축 텍스트 설정
+            # [핵심 수정] 좌우 대칭(Margin) 및 하단 여백 확보
             fig.update_layout(
                 title=dict(text=f"<b>{c_name}</b>", font=dict(size=18, color="white"), x=0.5, xanchor='center'),
-                height=250, # 높이를 충분히 줘서 하단 글씨 공간 확보
-                # l, r을 30으로 맞춰 대칭 확보, b를 60으로 늘려 글씨 잘림 방지
-                margin=dict(l=30, r=30, t=50, b=60), 
+                height=250, 
+                # l=10, r=10으로 좌우 여백을 최소화하고 똑같이 맞춰서 대칭 확보
+                # b=60으로 하단 여백을 늘려 날짜/시간 텍스트가 잘리지 않게 함
+                margin=dict(l=10, r=10, t=50, b=60), 
                 paper_bgcolor='rgba(0,0,0,0)', 
                 plot_bgcolor='rgba(0,0,0,0)', 
                 showlegend=False, 
@@ -224,11 +226,12 @@ for i, c_name in enumerate(child_names):
                 xaxis=dict(
                     showgrid=False, 
                     color='white', 
-                    tickfont=dict(size=11, weight='bold'), # 글씨 크기 UP
+                    tickfont=dict(size=12, weight='bold'), # 글씨 크기 키움
                     fixedrange=True,
-                    range=[-0.5, 6.5] # 데이터 포인트 7개가 중앙에 오도록 강제 정렬
+                    range=[-0.5, 6.5] # 7개 데이터 포인트가 항상 중앙에 오도록 고정
                 ), 
-                yaxis=dict(range=[34, 42], visible=False, fixedrange=True)
+                # Y축은 보이지 않게 처리하고, 공간 차지하지 않도록 설정
+                yaxis=dict(range=[34, 42], visible=False, fixedrange=True, showticklabels=False)
             )
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'scrollZoom': False}, key=f"chart_{c_name}")
 
