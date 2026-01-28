@@ -73,7 +73,7 @@ with st.expander("📝 새로운 기록 추가하기", expanded=False):
             save_data(st.session_state.df)
             st.rerun()
 
-# 4. 현황 대시보드
+# 4. 현황 대시보드 (아이별 맞춤 기준 적용)
 st.subheader("📊 현재 상태 요약")
 cols = st.columns(3)
 child_names = ["아율", "아인", "혁"]
@@ -84,27 +84,36 @@ for i, c_name in enumerate(child_names):
     with cols[i]:
         if not child_df.empty:
             latest = child_df.iloc[-1]
-            prev_temp = child_df.iloc[-2]['체온'] if len(child_df) > 1 else latest['체온']
-            diff = round(latest['체온'] - prev_temp, 1)
-            if latest['체온'] <= 37.5: st_txt, st_icon, bg = "정상", "🟢", "status-normal"
-            elif latest['체온'] <= 38.9: st_txt, st_icon, bg = "미열", "🟠", "status-caution"
-            else: st_txt, st_icon, bg = "고열", "🔴", "status-danger"
+            t = latest["체온"]
+            prev_temp = child_df.iloc[-2]['체온'] if len(child_df) > 1 else t
+            diff = round(t - prev_temp, 1)
+            
+            # --- 고열 기준 로직 수정 ---
+            if c_name == "혁":
+                # 혁이(영유아): 38도 이상 고열
+                if t <= 37.5: st_txt, st_icon, bg = "정상", "🟢", "status-normal"
+                elif t < 38.0: st_txt, st_icon, bg = "미열", "🟠", "status-caution"
+                else: st_txt, st_icon, bg = "고열", "🔴", "status-danger"
+            else:
+                # 아율, 아인(어린이): 기존 기준 유지
+                if t <= 37.5: st_txt, st_icon, bg = "정상", "🟢", "status-normal"
+                elif t <= 38.9: st_txt, st_icon, bg = "미열", "🟠", "status-caution"
+                else: st_txt, st_icon, bg = "고열", "🔴", "status-danger"
+            # --------------------------
+
             delta_prefix = "↑" if diff > 0 else "↓" if diff < 0 else ""
-            st.markdown(f'<div class="status-card {bg}"><div><div class="card-header">{child_icons[c_name]} {c_name} {st_icon} {st_txt}</div><div class="card-temp">{latest["체온"]}°C</div><div class="card-delta">{delta_prefix} {abs(diff)}°C</div></div><div class="card-footer">🕒 {latest["날짜"]} {latest["시간"]}</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="status-card {bg}"><div><div class="card-header">{child_icons[c_name]} {c_name} {st_icon} {st_txt}</div><div class="card-temp">{t}°C</div><div class="card-delta">{delta_prefix} {abs(diff)}°C</div></div><div class="card-footer">🕒 {latest["날짜"]} {latest["시간"]}</div></div>', unsafe_allow_html=True)
         else: st.info(f"{c_name}: 기록 없음")
 
-# 5. 아이별 그래프 (날짜/시간 2줄 표시)
+# 5. 아이별 그래프 (두 줄 표시 유지)
 st.subheader("📈 최근 체온 흐름")
 g_cols = st.columns(3)
 
 def prepare_chart_data(df):
     if df.empty: return df
     chart_df = df.tail(7).copy()
-    # 날짜와 시간을 리스트 형태로 넣어 Vega-Lite에서 자동으로 줄바꿈 처리되게 함
     chart_df['심플날짜'] = chart_df['날짜'].str.split('.').str[1:].str.join('.') + "일"
     chart_df['심플시간'] = chart_df['시간'].str.split(' ').str[-1]
-    
-    # 2줄로 표시하기 위해 [날짜, 시간] 리스트 생성
     chart_df['시간축'] = chart_df[['심플날짜', '심플시간']].values.tolist()
     return chart_df
 
@@ -114,32 +123,20 @@ for i, c_name in enumerate(child_names):
         if not f_df.empty:
             st.markdown(f"**{child_icons[c_name]} {c_name}**")
             chart_data = prepare_chart_data(f_df)
-            
             st.vega_lite_chart(chart_data, {
                 'height': 220,
                 'layer': [
-                    {
-                        'mark': {'type': 'line', 'point': {'size': 80, 'color': '#ff4b4b'}, 'color': '#ff4b4b', 'strokeWidth': 3},
-                        'encoding': {
-                            'x': {'field': '시간축', 'type': 'nominal', 'axis': {'title': None, 'labelAngle': 0}},
-                            'y': {'field': '체온', 'type': 'quantitative', 'scale': {'domain': [30, 42]}, 'axis': None}
-                        }
-                    },
-                    {
-                        'mark': {'type': 'text', 'dy': -15, 'fontSize': 13, 'fontWeight': 'bold', 'color': 'white'},
-                        'encoding': {
-                            'x': {'field': '시간축', 'type': 'nominal'},
-                            'y': {'field': '체온', 'type': 'quantitative'},
-                            'text': {'field': '체온', 'type': 'quantitative', 'format': '.1f'}
-                        }
-                    }
-                ],
-                'config': {'view': {'stroke': 'transparent'}}
+                    {'mark': {'type': 'line', 'point': {'size': 80, 'color': '#ff4b4b'}, 'color': '#ff4b4b', 'strokeWidth': 3},
+                     'encoding': {'x': {'field': '시간축', 'type': 'nominal', 'axis': {'title': None, 'labelAngle': 0}},
+                                   'y': {'field': '체온', 'type': 'quantitative', 'scale': {'domain': [30, 42]}, 'axis': None}}},
+                    {'mark': {'type': 'text', 'dy': -15, 'fontSize': 13, 'fontWeight': 'bold', 'color': 'white'},
+                     'encoding': {'x': {'field': '시간축', 'type': 'nominal'}, 'y': {'field': '체온', 'type': 'quantitative'},
+                                   'text': {'field': '체온', 'type': 'quantitative', 'format': '.1f'}}}
+                ], 'config': {'view': {'stroke': 'transparent'}}
             }, use_container_width=True)
-        else:
-            st.info(f"{c_name} 데이터 없음")
+        else: st.info(f"{c_name} 데이터 없음")
 
 # 6. 상세 기록 탭
 st.divider()
 tabs = st.tabs(["📋 전체 기록", "💖 아율", "💛 아인", "💙 혁"])
-# ... [상세 기록 및 삭제 로직 포함된 표 코드는 동일]
+# ... (상세 기록 및 삭제 로직 코드 동일)
