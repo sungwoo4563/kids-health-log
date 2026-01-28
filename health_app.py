@@ -268,7 +268,8 @@ if not st.session_state.df.empty:
         editor_df = st.session_state.df.copy()
         editor_df = editor_df.fillna("")
         
-        cols_order = ["날짜", "시간", "이름", "체온", "약 종류", "용량", "특이사항"]
+        # [수정] 수정 모드에서도 '이름'을 맨 앞으로
+        cols_order = ["이름", "날짜", "시간", "체온", "약 종류", "용량", "특이사항"]
         final_cols = [c for c in cols_order if c in editor_df.columns]
         editor_df = editor_df[final_cols]
         
@@ -308,18 +309,19 @@ if not st.session_state.df.empty:
                     if '용량' in show_df.columns:
                         show_df['용량'] = show_df['용량'].apply(format_vol)
 
-                    cols_order = ["날짜", "시간", "이름", "체온", "약 종류", "용량", "특이사항"]
+                    # [핵심] 보기 모드에서 '이름'을 맨 앞으로 정렬
+                    cols_order = ["이름", "날짜", "시간", "체온", "약 종류", "용량", "특이사항"]
                     final_cols = [c for c in cols_order if c in show_df.columns]
                     show_df = show_df[final_cols]
                     
                     styled_df = show_df.style.apply(color_rows, axis=1)
                     
-                    # [핵심 수정] 높이 자동 계산 (35px = 행 높이, 3px = 버퍼)
+                    # 높이 자동 계산 (35px = 행 높이, 3px = 버퍼)
                     dynamic_height = (len(show_df) + 1) * 35 + 3
 
                     st.dataframe(
                         styled_df, 
                         use_container_width=True, 
                         hide_index=True,
-                        height=dynamic_height # 숫자로 계산된 높이 적용
+                        height=dynamic_height
                     )
