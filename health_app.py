@@ -10,7 +10,7 @@ st.title("🌡️ 우리 아이 건강 관리")
 # 2. 파일 경로 설정
 DATA_FILE = "health_data.csv"
 
-# 3. 데이터 불러오기 함수
+# 3. 데이터 불러오기 및 저장 함수
 def load_data():
     if os.path.exists(DATA_FILE):
         return pd.read_csv(DATA_FILE)
@@ -20,7 +20,9 @@ def load_data():
 def save_data(df):
     df.to_csv(DATA_FILE, index=False, encoding='utf-8-sig')
 
-df = load_data()
+# 초기 데이터 로드
+if 'df' not in st.session_state:
+    st.session_state.df = load_data()
 
 # 4. 입력 폼
 with st.form("health_form", clear_on_submit=True):
@@ -57,55 +59,65 @@ with st.form("health_form", clear_on_submit=True):
     note = st.text_area("특이사항", placeholder="증상이나 메모를 남겨주세요")
     submit = st.form_submit_button("💾 기록 저장")
 
-# 5. 저장 로직
 if submit:
     new_row = {
         "날짜": formatted_date, "시간": formatted_time, "이름": name,
         "체온": temp, "약 종류": med_type, "용량": med_volume, "특이사항": note
     }
-    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-    save_data(df)
-    st.success(f"✅ 저장 완료!")
+    st.session_state.df = pd.concat([st.session_state.df, pd.DataFrame([new_row])], ignore_index=True)
+    save_data(st.session_state.df)
+    st.success("✅ 저장되었습니다!")
     st.rerun()
 
-# 6. 전체 기록 확인 및 삭제 기능
+# 5. 전체 기록 확인 및 선택 삭제
 st.divider()
-st.subheader("📋 전체 기록 확인")
+st.subheader("📋 기록 관리 및 삭제")
 
-if not df.empty:
-    # 상단 버튼 레이아웃
-    btn_col1, btn_col2 = st.columns([1, 1])
+if not st.session_state.df.empty:
+    # 엑셀 다운로드 버튼
+    csv = st.session_state.df.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
+    st.download_button(
+        label="📥 전체 기록 엑셀 내려받기",
+        data=csv,
+        file_name=f"건강기록_{datetime.date.today()}.csv",
+        mime="text/csv",
+    )
     
-    with btn_col1:
-        # 엑셀 다운로드 버튼
-        csv = df.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
-        st.download_button(
-            label="📥 전체 기록 엑셀 내려받기",
-            data=csv,
-            file_name=f"건강기록_{datetime.date.today()}.csv",
-            mime="text/csv",
-        )
+    st.write("💡 삭제할 항목을 왼쪽 체크박스에서 선택하고 아래 '선택 항목 삭제' 버튼을 누르세요.")
     
-    with btn_col2:
-        # 최근 기록 1개 삭제 버튼
-        if st.button("🗑️ 방금 입력한 기록 삭제"):
-            if len(df) > 0:
-                df = df.drop(df.index[-1])
-                save_data(df)
-                st.warning("마지막 기록이 삭제되었습니다.")
-                st.rerun()
+    # 최신순으로 보여주기 위해 인덱스 역순 정렬
+    display_df = st.session_state.df.copy()
+    display_df['선택'] = False
+    # 컬럼 순서 조정 (선택을 맨 앞으로)
+    cols = ['선택'] + [c for c in display_df.columns if c != '선택']
+    display_df = display_df[cols]
 
-    # 데이터 표시 (최신순)
-    st.write("💡 표에서 내용을 확인하세요 (최신순)")
-    st.dataframe(df.iloc[::-1], use_container_width=True, hide_index=True)
-    
-    # 선택 삭제 기능 (고급)
-    with st.expander("⚠️ 특정 기록 골라서 삭제하기"):
-        delete_idx = st.number_input("삭제할 행 번호 입력 (표의 순서가 아님)", min_value=0, max_value=len(df)-1, step=1)
-        if st.button("선택한 번호 삭제"):
-            df = df.drop(df.index[delete_idx])
-            save_data(df)
-            st.error(f"{delete_idx}번 기록이 삭제되었습니다.")
+    # 데이터 에디터 (체크박스 기능 포함)
+    edited_df = st.data_editor(
+        display_df.iloc[::-1], # 최신순
+        hide_index=True,
+        use_container_width=True,
+        column_config={"선택": st.column_config.CheckboxColumn(required=True)}
+    )
+
+    # 삭제 버튼
+    if st.button("🗑️ 선택한 항목 삭제"):
+        # 체크되지 않은 항목들만 남기기
+        # 역순으로 표시된 데이터에서 체크된 항목의 원본 인덱스를 찾아 삭제
+        selected_rows = edited_df[edited_df['선택'] == True]
+        if not selected_rows.empty:
+            # 원본 df에서 날짜, 시간, 이름, 체온이 모두 일치하는 행을 제외하고 남김
+            for _, row in selected_rows.iterrows():
+                st.session_state.df = st.session_state.df[
+                    ~((st.session_state.df['날짜'] == row['날짜']) & 
+                      (st.session_state.df['시간'] == row['시간']) & 
+                      (st.session_state.df['이름'] == row['이름']) &
+                      (st.session_state.df['체온'] == row['체온']))
+                ]
+            save_data(st.session_state.df)
+            st.warning("선택한 기록이 삭제되었습니다.")
             st.rerun()
+        else:
+            st.info("삭제할 항목을 먼저 선택해주세요.")
 else:
     st.info("아직 기록이 없습니다.")
