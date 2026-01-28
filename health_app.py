@@ -4,22 +4,81 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 디자인 졸업 작품 (버튼 투명화 + 체온계 통합 테두리)
+# 1. 페이지 설정 및 디자인 고도화
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
     <style>
-    /* 1. 배경 및 기본 텍스트: 다크 모드 강제 */
+    /* 1. 전체 배경 및 기본 텍스트: 다크 모드 강제 */
     .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
         background-color: #0d1117 !important;
         color: #ffffff !important;
     }
 
     /* -----------------------------------------------------------
-       [테두리 단일화 & 배경 제거 솔루션]
+       [기록 저장 버튼 수정] 
+       폼 제출 버튼(stFormSubmitButton)을 직접 타격하여 배경 제거
     ----------------------------------------------------------- */
+    div[data-testid="stFormSubmitButton"] > button {
+        background-color: transparent !important; /* 배경 투명 */
+        color: #ffffff !important; /* 글자 흰색 */
+        border: 1px solid #ffffff !important; /* 흰색 테두리 */
+        font-weight: bold !important;
+        border-radius: 8px !important;
+        width: 100% !important;
+        height: 3.5em !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+    }
     
-    /* 입력창 '껍데기'에만 흰색 테두리 부여 */
+    /* 버튼 눌렀을 때(Active) 효과 */
+    div[data-testid="stFormSubmitButton"] > button:active,
+    div[data-testid="stFormSubmitButton"] > button:focus:not(:active) {
+        background-color: rgba(255, 255, 255, 0.1) !important;
+        border-color: #4ade80 !important;
+        color: #4ade80 !important;
+    }
+
+    /* -----------------------------------------------------------
+       [체온 기록 (Number Input) 통합 테두리]
+    ----------------------------------------------------------- */
+    /* 1. 숫자 입력창의 전체 컨테이너(껍데기)에만 테두리를 줍니다. */
+    div[data-testid="stNumberInput"] div[data-baseweb="input"] {
+        border: 1px solid #ffffff !important;
+        border-radius: 8px !important;
+        background-color: transparent !important;
+        padding-right: 0px !important; /* 버튼과 간격 없애기 */
+    }
+
+    /* 2. 내부의 실제 입력칸(input)은 테두리 제거 */
+    div[data-testid="stNumberInput"] input {
+        border: none !important;
+        background-color: transparent !important;
+    }
+
+    /* 3. +/- 버튼들이 들어있는 컨테이너 배경/테두리 제거 */
+    div[data-testid="stNumberInput"] div[data-baseweb="input"] > div {
+        border: none !important;
+        background-color: transparent !important;
+    }
+
+    /* 4. +/- 개별 버튼 디자인: 배경 투명, 글자 흰색, 왼쪽 선만 살짝(구분용) */
+    div[data-testid="stNumberInputStepDown"], 
+    div[data-testid="stNumberInputStepUp"] {
+        background-color: transparent !important;
+        border: none !important;
+        color: #ffffff !important;
+        margin: 0 !important;
+    }
+    
+    /* +/- 버튼 사이의 구분선도 제거하여 완전 통일감 */
+    div[data-testid="stNumberInputStepDown"] {
+        border-right: 1px solid rgba(255,255,255,0.2) !important; /* 버튼끼리만 살짝 구분 */
+    }
+
+    /* -----------------------------------------------------------
+       [나머지 입력창 디자인 유지]
+    ----------------------------------------------------------- */
     div[data-baseweb="select"], 
     div[data-baseweb="input"], 
     div[data-baseweb="textarea"] {
@@ -28,65 +87,33 @@ st.markdown("""
         border-radius: 8px !important;
         box-shadow: none !important;
     }
-
-    /* [핵심] 체온 기록(숫자 입력기) 내부의 중복 테두리 제거 */
-    /* +/- 버튼의 테두리를 없애서 전체가 하나의 박스처럼 보이게 함 */
-    div[data-testid="stNumberInputStepDown"], 
-    div[data-testid="stNumberInputStepUp"] {
-        border: none !important;
-        background-color: transparent !important;
-        color: #ffffff !important;
-    }
     
-    /* 내부 알맹이(실제 input) 테두리 제거 */
+    /* 중복 테두리 방지 */
     div[data-baseweb="base-input"], 
-    input, textarea, select, 
-    div[data-baseweb="select"] > div {
+    input, textarea, select {
         border: none !important;
         background-color: transparent !important;
         box-shadow: none !important;
     }
 
     /* -----------------------------------------------------------
-       [기록 저장 버튼 디자인 변경]
-       녹색 배경을 제거하고, 입력창과 똑같은 '투명 배경 + 흰색 테두리'로 변경
-    ----------------------------------------------------------- */
-    .stButton > button {
-        background-color: transparent !important; /* 배경 투명 */
-        color: #ffffff !important;
-        border: 1px solid #ffffff !important; /* 흰색 테두리 */
-        font-weight: bold !important;
-        border-radius: 8px !important;
-        height: 3.5em !important;
-        width: 100% !important;
-        text-shadow: none !important;
-        transition: all 0.2s; /* 부드러운 효과 */
-    }
-    
-    /* 버튼에 마우스 올리거나 눌렀을 때 살짝 표시 (선택사항) */
-    .stButton > button:active, .stButton > button:hover {
-        background-color: rgba(255, 255, 255, 0.1) !important;
-        border-color: #4ade80 !important; /* 누르면 살짝 연두색 테두리 */
-        color: #4ade80 !important;
-    }
-
-    /* -----------------------------------------------------------
-       [커서 박멸 솔루션 (유지)]
+       [커서 박멸 유지]
     ----------------------------------------------------------- */
     input, textarea { caret-color: transparent !important; }
     div[data-baseweb="select"] input { opacity: 0 !important; width: 1px !important; }
     * { -webkit-tap-highlight-color: transparent !important; }
 
-    /* -----------------------------------------------------------
-       [기타 가독성 디자인]
-    ----------------------------------------------------------- */
+    /* 텍스트 색상 및 라벨 */
     input, textarea, div[data-baseweb="select"] span {
         color: #ffffff !important;
         -webkit-text-fill-color: #ffffff !important;
-        font-weight: 500 !important;
+    }
+    label, p, span, [data-testid="stWidgetLabel"] p {
+        color: #ffffff !important;
+        font-weight: bold !important;
     }
 
-    /* 상세 기록 표 디자인 */
+    /* 상세 기록 표 */
     [data-testid="stDataFrame"], [data-testid="stTable"], .stDataFrame {
         border: 1px solid #ffffff !important;
         background-color: transparent !important;
@@ -95,12 +122,6 @@ st.markdown("""
         border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
         color: #ffffff !important;
         background-color: transparent !important;
-    }
-
-    /* 라벨 텍스트 */
-    label, p, span, [data-testid="stWidgetLabel"] p {
-        color: #ffffff !important;
-        font-weight: bold !important;
     }
     </style>
     """, unsafe_allow_html=True)
