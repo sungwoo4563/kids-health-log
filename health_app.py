@@ -3,7 +3,7 @@ import pandas as pd
 import datetime
 import os
 
-# 1. 페이지 설정 및 디자인
+# 1. 페이지 설정 및 다크 모드 스타일
 st.set_page_config(page_title="아율·아인·혁 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
@@ -36,7 +36,7 @@ def save_data(df): df.to_csv(DATA_FILE, index=False, encoding='utf-8-sig')
 
 if 'df' not in st.session_state: st.session_state.df = load_data()
 
-# 3. 입력 폼 (현재 시간 자동 반영)
+# 3. 입력 폼 (생략 - 기존 유지)
 now = datetime.datetime.now()
 with st.expander("📝 새로운 기록 추가하기", expanded=False):
     with st.form("health_form", clear_on_submit=True):
@@ -93,31 +93,38 @@ for i, c_name in enumerate(child_names):
             st.markdown(f'<div class="status-card {bg}"><div><div class="card-header">{child_icons[c_name]} {c_name} {st_icon} {st_txt}</div><div class="card-temp">{latest["체온"]}°C</div><div class="card-delta">{delta_prefix} {abs(diff)}°C</div></div><div class="card-footer">🕒 {latest["날짜"]} {latest["시간"]}</div></div>', unsafe_allow_html=True)
         else: st.info(f"{c_name}: 기록 없음")
 
-# 5. 아이별 그래프 (디자인 포인트 강조)
-st.subheader("📈 최근 체온 변화 흐름")
+# 5. 아이별 그래프 (세로축 제거 & 시간만 표시)
+st.subheader("📈 최근 체온 흐름")
 g_cols = st.columns(3)
+
+def prepare_chart_data(df):
+    if df.empty: return df
+    # 최근 10개만, 시간 표시를 '10:30'처럼 아주 짧게 가공
+    chart_df = df.tail(10).copy()
+    chart_df['시간축'] = chart_df['시간'].str.split(' ').str[-1] # '오전 10:30' -> '10:30'
+    return chart_df
 
 for i, c_name in enumerate(child_names):
     with g_cols[i]:
         f_df = st.session_state.df[st.session_state.df['이름'] == c_name]
         if not f_df.empty:
-            st.markdown(f"**{child_icons[c_name]} {c_name} 추세**")
-            chart_data = f_df.tail(12).copy()
+            st.markdown(f"**{child_icons[c_name]} {c_name}**")
+            chart_data = prepare_chart_data(f_df)
             
-            # 1. 가로축 텍스트 제거 및 범위 고정
-            # 2. 'points=True' 옵션으로 디자인 포인트(점) 추가
-            st.line_chart(
-                chart_data, 
-                y='체온', 
-                color="#ff4b4b", 
-                height=250,
-                use_container_width=True
-            )
-            st.caption("💡 그래프 위를 마우스로 올리면 상세 수치가 보입니다.")
+            # 세로축 숫자 제거를 위해 vega_lite 사용
+            st.vega_lite_chart(chart_data, {
+                'height': 200,
+                'mark': {'type': 'line', 'point': {'size': 60, 'color': '#ff4b4b'}, 'color': '#ff4b4b', 'strokeWidth': 3},
+                'encoding': {
+                    'x': {'field': '시간축', 'type': 'nominal', 'axis': {'title': None, 'labelAngle': 0, 'grid': False}},
+                    'y': {'field': '체온', 'type': 'quantitative', 'scale': {'domain': [30, 42]}, 'axis': None}, # 세로축 제거
+                },
+                'config': {'view': {'stroke': 'transparent'}}
+            }, use_container_width=True)
         else:
             st.info(f"{c_name} 데이터 없음")
 
-# 6. 상세 기록 탭 (이후 생략)
+# 6. 상세 기록 탭
 st.divider()
 tabs = st.tabs(["📋 전체 기록", "💖 아율", "💛 아인", "💙 혁"])
-# ... [이전과 동일한 탭/표 코드]
+# ... [이전 상세 기록 코드 유지]
