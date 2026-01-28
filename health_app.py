@@ -4,7 +4,7 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 디자인 (그래프 정렬 및 여백 최적화)
+# 1. 페이지 설정 및 디자인 (그래프 줌 차단 + 기존 디자인 유지)
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
@@ -15,23 +15,20 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* 2. [핵심 수정] 그래프(Plotly) 액자 디자인 & 정렬 교정
-       - padding을 10px에서 15px로 늘려 내부 여백 확보
-       - display flex로 완벽한 중앙 정렬 유도
-    */
+    /* 2. 그래프(Plotly) 액자 디자인 & 중앙 정렬 */
     [data-testid="stPlotlyChart"] {
         border: 2px solid #ffffff !important;
         border-radius: 15px !important;
-        padding: 15px !important; /* 내부 여백을 넉넉하게 줘서 답답함 해소 */
+        padding: 15px !important;
         background-color: #0d1117 !important;
         margin-bottom: 15px !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important; /* 살짝 그림자 줘서 입체감 */
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
         display: flex !important;
         justify-content: center !important;
         align-items: center !important;
     }
     
-    /* 그래프 캔버스 자체도 꽉 차게 */
+    /* 그래프 캔버스 꽉 채우기 */
     [data-testid="stPlotlyChart"] > div {
         width: 100% !important;
         height: 100% !important;
@@ -214,19 +211,20 @@ for i, c_name in enumerate(child_names):
             fig.add_hrect(y0=d_limit, y1=42, fillcolor="#dc3545", opacity=0.15, line_width=0)
             fig.add_trace(go.Scatter(x=f_df['축'], y=f_df['체온'], mode='lines+markers+text', line=dict(color='white', width=2), marker=dict(color=colors, size=10, line=dict(color='white', width=1)), text=f_df['체온'], textposition="top center", textfont=dict(color="white", size=11)))
             
-            # [수정] 그래프 여백 및 정렬 대폭 수정
+            # [수정] 줌 인/아웃 고정 설정 (fixedrange) & 드래그 비활성화 (dragmode)
             fig.update_layout(
                 title=dict(text=f"<b>{c_name}</b>", font=dict(size=18, color="white"), x=0.5, xanchor='center'),
-                height=220, # 높이를 살짝 키워 여유 확보
-                # margin을 조절하여 그래프가 박스 정중앙에 '예쁘게' 위치하도록 유도
+                height=220,
                 margin=dict(l=25, r=25, t=50, b=25), 
                 paper_bgcolor='rgba(0,0,0,0)', 
                 plot_bgcolor='rgba(0,0,0,0)', 
                 showlegend=False, 
-                xaxis=dict(showgrid=False, color='white', tickfont=dict(size=10)), # 폰트 사이즈 9->10
-                yaxis=dict(range=[34, 42], visible=False)
+                dragmode=False, # 드래그(Pan) 비활성화
+                xaxis=dict(showgrid=False, color='white', tickfont=dict(size=10), fixedrange=True), # X축 줌 고정
+                yaxis=dict(range=[34, 42], visible=False, fixedrange=True) # Y축 줌 고정
             )
-            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}, key=f"chart_{c_name}")
+            # config 설정으로 줌 스크롤까지 확실히 차단
+            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'scrollZoom': False}, key=f"chart_{c_name}")
 
 # 6. 상세 기록 리스트
 st.divider()
