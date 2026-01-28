@@ -4,7 +4,7 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 가독성 극대화 CSS (강제 다크 테마)
+# 1. 페이지 설정 및 디자인 고도화 (Outline 스타일 적용)
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
@@ -15,44 +15,47 @@ st.markdown("""
         color: #e6edf3 !important; 
     }
     
-    /* 입력창 배경 및 글자색 강제 설정 (라이트 모드 방지) */
-    input, select, textarea, div[role="listbox"] {
-        background-color: #21262d !important;
-        color: #ffffff !important;
-        border: 1px solid #30363d !important;
+    /* [핵심] 모든 입력창을 측정날짜처럼 테두리 스타일로 변경 */
+    input, select, textarea, div[role="combobox"], div[data-baseweb="select"] {
+        background-color: transparent !important; /* 배경을 투명하게 */
+        color: #ffffff !important; /* 글자는 흰색 */
+        border: 1px solid #4e5d6c !important; /* 테두리는 은은한 회색선 */
+        border-radius: 8px !important;
+        caret-color: transparent !important; /* 커서 숨기기 */
     }
 
-    /* 선택된 텍스트와 라벨 가독성 강화 */
-    label, p, span, .stMarkdown {
-        color: #e6edf3 !important;
-        font-weight: 500 !important;
+    /* 포커스 되었을 때 테두리 색상 강조 (영상 편집기 활성창 느낌) */
+    input:focus, div[data-baseweb="select"]:focus {
+        border-color: #58a6ff !important;
+        box-shadow: 0 0 0 1px #58a6ff !important;
     }
 
-    /* 기록 입력창(Expander) 테두리와 배경 강조 */
+    /* 라벨 및 텍스트 색상 고정 */
+    label, p, span, .stMarkdown { color: #e6edf3 !important; font-weight: 500 !important; }
+
+    /* 입력 섹션 테두리 */
     .stExpander {
-        border: 2px solid #30363d !important;
+        border: 1px solid #30363d !important;
         border-radius: 12px !important;
         background-color: #161b22 !important;
     }
 
-    /* 상태 카드 디자인 보정 */
+    /* 상태 카드 디자인 */
     .status-card {
         padding: 15px; border-radius: 15px; margin-bottom: 10px; color: white !important;
         min-height: 160px; display: flex; flex-direction: column; justify-content: space-between;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
     .status-normal { background-color: #1e3a2a !important; border: 1px solid #2e5a3a; }
     .status-caution { background-color: #4a3a1a !important; border: 1px solid #6a5a2a; }
     .status-danger { background-color: #3e1a1a !important; border: 1px solid #5e2a2a; }
     
-    .card-temp { color: #ffffff !important; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
-    
-    /* 버튼 가독성 */
+    /* 버튼 스타일 */
     .stButton > button {
         background-color: #238636 !important;
         color: white !important;
         border: none !important;
         font-weight: bold !important;
+        border-radius: 8px !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -67,11 +70,9 @@ def load_data():
         except: return pd.DataFrame(columns=["날짜", "시간", "이름", "체온", "약 종류", "용량", "특이사항"])
     return pd.DataFrame(columns=["날짜", "시간", "이름", "체온", "약 종류", "용량", "특이사항"])
 
-def save_data(df):
-    df.to_csv(DATA_FILE, index=False, encoding='utf-8-sig')
+def save_data(df): df.to_csv(DATA_FILE, index=False, encoding='utf-8-sig')
 
-if 'df' not in st.session_state:
-    st.session_state.df = load_data()
+if 'df' not in st.session_state: st.session_state.df = load_data()
 
 # 3. 퀵 기록 센터 (KST 반영)
 now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
@@ -115,8 +116,7 @@ for i, c_name in enumerate(child_names):
     child_df = st.session_state.df[st.session_state.df['이름'] == c_name]
     with cols[i]:
         if not child_df.empty:
-            latest = child_df.iloc[-1]
-            t = latest["체온"]
+            latest = child_df.iloc[-1]; t = latest["체온"]
             prev_t = child_df.iloc[-2]['체온'] if len(child_df) > 1 else t
             diff = round(t - prev_t, 1)
             d_limit = 38.0 if c_name == "혁" else 39.0
@@ -127,7 +127,7 @@ for i, c_name in enumerate(child_names):
             st.markdown(f'<div class="status-card {bg}"><div><div class="card-header">{child_icons[c_name]} {c_name} | {icon} {txt}</div><div class="card-temp">{t}°C</div><div class="card-delta">{diff_text}</div></div><div class="card-footer">🕒 {latest["날짜"]} {latest["시간"]}</div></div>', unsafe_allow_html=True)
         else: st.info(f"{c_name}: 기록 없음")
 
-# 5. 아이별 그래프 (Plotly)
+# 5. 아이별 그래프 추이 (Plotly)
 st.subheader("📈 최근 체온 흐름")
 g_cols = st.columns(3)
 for i, c_name in enumerate(child_names):
@@ -155,8 +155,7 @@ if not st.session_state.df.empty:
         with tab:
             display_df = st.session_state.df if n_filter is None else st.session_state.df[st.session_state.df['이름'] == n_filter]
             if not display_df.empty:
-                d_df = display_df.copy().iloc[::-1]
-                d_df.insert(0, '선택', False)
+                d_df = display_df.copy().iloc[::-1]; d_df.insert(0, '선택', False)
                 def style_temp(val):
                     limit = 38.0 if n_filter == "혁" else 39.0
                     color = '#4ade80' if val <= 37.5 else '#fbbf24' if val < limit else '#f87171'
