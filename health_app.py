@@ -7,12 +7,16 @@ import datetime
 st.set_page_config(page_title="아율·아인·혁 건강기록", page_icon="🌡️")
 st.title("🌡️ 우리 아이 건강 관리")
 
-# 2. 구글 시트 연결
+# 2. 구글 시트 연결 (서비스 계정 설정 반영)
+# Secrets에 넣은 service_account 정보를 사용하여 연결합니다.
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # 3. 데이터 불러오기
 try:
+    # 데이터가 없을 경우를 대비해 columns를 명확히 지정
     df = conn.read(ttl=0)
+    if df.empty:
+        df = pd.DataFrame(columns=["일시", "이름", "체온", "약 종류", "용량", "특이사항"])
 except Exception:
     df = pd.DataFrame(columns=["일시", "이름", "체온", "약 종류", "용량", "특이사항"])
 
@@ -23,57 +27,48 @@ with st.form("health_form", clear_on_submit=True):
     col1, col2 = st.columns(2)
     with col1:
         name = st.selectbox("아이 선택", ["아율", "아인", "혁"])
-        
-        # [핵심] 날짜와 시간을 한 번에 선택할 수 있는 입력창
-        # 현재 날짜와 시간이 기본값으로 세팅됩니다.
-        recorded_at = st.datetime_input("언제 먹였나요? (날짜 및 시간)", datetime.datetime.now())
+        recorded_at = st.datetime_input("언제 먹였나요?", datetime.datetime.now())
         
     with col2:
         temp = st.number_input("현재 체온 (℃)", min_value=34.0, max_value=42.0, value=36.5, step=0.1, format="%.1f")
         med_type = st.selectbox("복용한 약", [
-            "선택 안 함", 
-            "맥시부펜(부루펜 계열)", 
-            "세토펜현탁(타이레놀 계열)", 
-            "아침약", "점심약", "저녁약", 
-            "기타"
+            "선택 안 함", "맥시부펜(부루펜 계열)", "세토펜현탁(타이레놀 계열)", 
+            "아침약", "점심약", "저녁약", "기타"
         ])
         med_volume = st.text_input("용량 (예: 5ml, 1포)", placeholder="용량을 입력하세요")
 
-    note = st.text_area("특이사항 (증상이나 메모)", placeholder="예: 기침이 심함, 약 먹고 바로 잠듦")
-    
+    note = st.text_area("특이사항", placeholder="예: 기침이 심함, 약 먹고 바로 잠듦")
     submit = st.form_submit_button("💾 기록 저장 및 공유")
 
-# 5. 저장 로직
+# 5. 저장 로직 (서비스 계정 권한으로 실행)
 if submit:
-    # 성우님이 선택한 날짜와 시간을 문자열로 변환
     full_datetime = recorded_at.strftime('%Y-%m-%d %H:%M')
-    
-    new_data = pd.DataFrame([{
+    new_row = {
         "일시": full_datetime, 
         "이름": name, 
         "체온": temp, 
         "약 종류": med_type, 
         "용량": med_volume, 
         "특이사항": note
-    }])
+    }
     
-    # 기존 데이터에 추가
-    updated_df = pd.concat([df, new_data], ignore_index=True)
-    
-    # 구글 시트 업데이트
     try:
-        conn.update(data=new_data)
+        # 기존 데이터에 한 줄 추가하여 전체 업데이트
+        updated_df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+        conn.update(data=updated_df)
+        
         st.success(f"✅ {name}의 기록이 저장되었습니다! ({full_datetime})")
         st.rerun()
     except Exception as e:
-        st.error("저장에 실패했습니다. 구글 시트 권한을 확인해주세요.")
+        st.error(f"저장에 실패했습니다. 시트 공유 설정에 서비스 계정 이메일이 편집자로 들어갔는지 확인해주세요.")
+        # 에러 로그를 살짝 보여주면 디버깅에 도움이 됩니다.
+        st.info("로그 확인용: 서비스 계정 이메일이 시트에 초대되었는지 꼭 확인해주세요!")
 
-# 6. 기록 목록 표시
+# 6. 최근 기록 표시
 st.divider()
 st.subheader("📋 최근 기록 (최신순)")
 if not df.empty:
-    # '일시' 기준으로 최신순 정렬
     display_df = df.sort_values(by="일시", ascending=False)
     st.dataframe(display_df, use_container_width=True, hide_index=True)
 else:
-    st.info("기록이 없습니다.")
+    st.info("기록이 아직 없습니다.")
