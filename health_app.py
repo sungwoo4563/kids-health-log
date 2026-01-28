@@ -82,7 +82,7 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* 6. 표(DataFrame) 스타일 */
+    /* 6. [핵심] 표(DataFrame) 스타일 강제 다크모드 */
     div[data-testid="stDataFrame"] div[role="columnheader"] {
         background-color: #161b22 !important;
         color: #e6edf3 !important;
@@ -92,12 +92,13 @@ st.markdown("""
     div[data-testid="stDataFrame"] div[role="gridcell"] {
         border-bottom: 1px solid #21262d !important;
         color: #ffffff !important;
+        background-color: #0d1117 !important; /* 셀 배경 강제 블랙 */
     }
     [data-testid="stDataFrame"] {
         background-color: #0d1117 !important;
     }
     
-    /* 표 위의 툴바(검색, 다운로드 등) 숨기기 유지 */
+    /* 툴바 숨김 */
     [data-testid="stElementToolbar"] {
         display: none !important;
     }
@@ -208,10 +209,10 @@ for i, c_name in enumerate(child_names):
             colors = ['#4ade80' if t <= 37.5 else '#fbbf24' if t < d_limit else '#f87171' for t in f_df['체온']]
             
             fig = go.Figure()
-            # [복구] 배경 색상 띠(hrect) 다시 추가
-            fig.add_hrect(y0=34, y1=37.5, fillcolor="#28a745", opacity=0.15, line_width=0) # 정상(초록)
-            fig.add_hrect(y0=37.5, y1=d_limit, fillcolor="#fd7e14", opacity=0.15, line_width=0) # 미열(주황)
-            fig.add_hrect(y0=d_limit, y1=42, fillcolor="#dc3545", opacity=0.15, line_width=0) # 고열(빨강)
+            # [복구] 그래프 배경 색상 띠 복원
+            fig.add_hrect(y0=34, y1=37.5, fillcolor="#28a745", opacity=0.15, line_width=0)
+            fig.add_hrect(y0=37.5, y1=d_limit, fillcolor="#fd7e14", opacity=0.15, line_width=0)
+            fig.add_hrect(y0=d_limit, y1=42, fillcolor="#dc3545", opacity=0.15, line_width=0)
             
             fig.add_trace(go.Scatter(x=f_df['축'], y=f_df['체온'], mode='lines+markers+text', line=dict(color='white', width=2), marker=dict(color=colors, size=10, line=dict(color='white', width=1)), text=f_df['체온'], textposition="top center", textfont=dict(color="white", size=11)))
             
@@ -241,16 +242,26 @@ st.subheader("📋 상세 기록")
 edit_mode = st.toggle("🗑️ 기록 삭제/수정 모드 (클릭하여 활성화)", value=False)
 
 def color_rows(row):
-    styles = {
-        "아율": "color: #ff99cc; font-weight: bold;", # 🌸 핑크 텍스트
-        "아인": "color: #a3e635; font-weight: bold;", # 🌿 라임 텍스트
-        "혁":   "color: #60a5fa; font-weight: bold;"  # 💧 스카이 블루 텍스트
-    }
+    # [핵심] 배경색을 #0d1117(블랙)으로 강제 지정하여 모바일 흰색 배경 방지
+    bg_color = "background-color: #0d1117;"
+    
+    text_color = "color: white;"
+    font_weight = "font-weight: normal;"
+
     name = str(row['이름'])
-    if "아율" in name: return [styles["아율"]] * len(row)
-    if "아인" in name: return [styles["아인"]] * len(row)
-    if "혁" in name:   return [styles["혁"]] * len(row)
-    return ['color: white;'] * len(row)
+    if "아율" in name: 
+        text_color = "color: #ff99cc;"
+        font_weight = "font-weight: bold;"
+    elif "아인" in name: 
+        text_color = "color: #a3e635;"
+        font_weight = "font-weight: bold;"
+    elif "혁" in name:   
+        text_color = "color: #60a5fa;"
+        font_weight = "font-weight: bold;"
+    
+    # 모든 셀에 '배경색 + 글자색' 스타일 동시 적용
+    final_style = f"{bg_color} {text_color} {font_weight}"
+    return [final_style] * len(row)
 
 if not st.session_state.df.empty:
     if edit_mode:
