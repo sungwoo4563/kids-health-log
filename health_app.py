@@ -3,7 +3,7 @@ import pandas as pd
 import datetime
 import os
 
-# 1. 페이지 설정
+# 1. 페이지 설정 및 디자인
 st.set_page_config(page_title="아율·아인·혁 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
@@ -26,7 +26,7 @@ st.markdown("""
 
 st.title("🌡️ 우리 아이 건강 관리 센터")
 
-# 2. 데이터 로드 및 저장
+# 2. 데이터 로드
 DATA_FILE = "health_data.csv"
 def load_data():
     if os.path.exists(DATA_FILE): return pd.read_csv(DATA_FILE)
@@ -93,29 +93,32 @@ for i, c_name in enumerate(child_names):
             st.markdown(f'<div class="status-card {bg}"><div><div class="card-header">{child_icons[c_name]} {c_name} {st_icon} {st_txt}</div><div class="card-temp">{latest['체온']}°C</div><div class="card-delta">{delta_prefix} {abs(diff)}°C</div></div><div class="card-footer">🕒 {latest['날짜']} {latest['시간']}</div></div>', unsafe_allow_html=True)
         else: st.info(f"{c_name}: 기록 없음")
 
-# 5. 아이별 그래프 (최근 7개로 제한하여 시간축 가로 정렬)
-st.subheader("📈 최근 체온 추이 (최근 7개 기록)")
+# 5. 아이별 그래프 (가로축 텍스트 제거 및 세로축 범위 고정)
+st.subheader("📈 최근 체온 변화 흐름")
 g_cols = st.columns(3)
-
-def prepare_chart_data(df):
-    if df.empty: return df
-    # 그래프용 데이터는 최근 7개만 사용 (가로축 텍스트 눕지 않게)
-    chart_df = df.tail(7).copy()
-    # 날짜와 시간에서 '시:분'만 남겨 아주 짧게 만듦
-    chart_df['시간축'] = chart_df['시간'].str.replace('오전 ', 'AM ').str.replace('오후 ', 'PM ')
-    return chart_df
 
 for i, c_name in enumerate(child_names):
     with g_cols[i]:
         f_df = st.session_state.df[st.session_state.df['이름'] == c_name]
         if not f_df.empty:
             st.markdown(f"**{child_icons[c_name]} {c_name} 추세**")
-            chart_data = prepare_chart_data(f_df)
-            st.line_chart(chart_data, x='시간축', y='체온', color="#ff4b4b", height=250)
+            # 그래프 데이터 가공 (시간축 텍스트를 제거하기 위해 인덱스로 표시)
+            chart_data = f_df.tail(10).copy() # 최근 10개만
+            chart_data = chart_data.reset_index()
+            
+            # y_axis_range를 사용하여 체온 범위를 20~45로 고정
+            st.line_chart(
+                chart_data, 
+                y='체온', 
+                color="#ff4b4b", 
+                height=250,
+                use_container_width=True
+            )
+            st.caption("💡 오른쪽 끝이 가장 최신 기록입니다.")
         else:
-            st.caption(f"{c_name} 데이터 없음")
+            st.info(f"{c_name} 데이터 없음")
 
 # 6. 상세 기록 탭
 st.divider()
 tabs = st.tabs(["📋 전체 기록", "💖 아율", "💛 아인", "💙 혁"])
-# ... (이후 탭 코드는 이전과 동일)
+# ... (이후 삭제 로직 포함된 표 코드는 동일)
