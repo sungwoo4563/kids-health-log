@@ -15,7 +15,6 @@ def load_data():
     if os.path.exists(DATA_FILE):
         return pd.read_csv(DATA_FILE)
     else:
-        # '일시' 제거, 날짜/시간을 앞쪽으로, 특이사항을 뒤쪽으로 구성
         return pd.DataFrame(columns=["날짜", "시간", "이름", "체온", "약 종류", "용량", "특이사항"])
 
 def save_data(df):
@@ -34,8 +33,8 @@ with st.form("health_form", clear_on_submit=True):
         name = st.selectbox("아이 선택", ["아율", "아인", "혁"])
     with col2:
         selected_date = st.date_input("날짜 선택", datetime.date.today())
-        # 성우님이 요청하신 26년 01월 28일 형식
-        formatted_date = selected_date.strftime("%y년 %m월 %d일")
+        # 요청하신 심플한 날짜 형식 (26.01.28)
+        formatted_date = selected_date.strftime("%y.%m.%d")
 
     st.write("🕒 복용 시간")
     t_col1, t_col2, t_col3 = st.columns(3)
@@ -48,7 +47,7 @@ with st.form("health_form", clear_on_submit=True):
     with t_col3:
         minute = st.selectbox("분", [f"{i:02d}" for i in range(0, 60, 5)])
     
-    formatted_time = f"{ampm} {hour}시 {minute}분"
+    formatted_time = f"{ampm} {hour}:{minute}"
 
     col3, col4, col5 = st.columns(3)
     with col3:
@@ -71,59 +70,61 @@ if submit:
     st.success("✅ 저장되었습니다!")
     st.rerun()
 
-# 5. 기록 관리 (체크박스 삭제 포함)
+# 5. 기록 관리 (색상 적용)
 st.divider()
 st.subheader("📋 기록 관리 및 삭제")
 
 if not st.session_state.df.empty:
     # 엑셀 다운로드 버튼
     csv = st.session_state.df.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
-    st.download_button(
-        label="📥 전체 기록 엑셀 내려받기",
-        data=csv,
-        file_name=f"건강기록_{datetime.date.today()}.csv",
-        mime="text/csv",
-    )
+    st.download_button(label="📥 전체 기록 엑셀 내려받기", data=csv, file_name=f"건강기록_{datetime.date.today()}.csv", mime="text/csv")
     
-    st.write("💡 삭제할 항목을 왼쪽 체크박스에서 선택하고 아래 '선택 항목 삭제' 버튼을 누르세요.")
-    
-    # 표시용 데이터프레임 구성 (날짜, 시간 순서 및 선택 박스 추가)
-    display_df = st.session_state.df.copy()
-    display_df.insert(0, '선택', False) # 맨 앞에 체크박스용 열 추가
+    st.write("💡 체온별 색상: 🟢 ~37.5 / 🟠 37.6~38.9 / 🔴 39.0~")
 
-    # 컬럼 순서 강제 지정 (선택, 날짜, 시간, 이름, 체온, 약 종류, 용량, 특이사항)
+    # 표시용 데이터프레임 구성
+    display_df = st.session_state.df.copy()
+    display_df.insert(0, '선택', False)
     cols = ['선택', '날짜', '시간', '이름', '체온', '약 종류', '용량', '특이사항']
     display_df = display_df[cols]
 
-    # 데이터 에디터 실행
+    # 체온에 따른 색상 스타일 적용 함수
+    def color_temp(val):
+        color = 'white'
+        if val <= 37.5:
+            color = '#d4edda' # 연한 초록
+        elif 37.6 <= val <= 38.9:
+            color = '#fff3cd' # 연한 주황
+        elif val >= 39.0:
+            color = '#f8d7da' # 연한 빨강
+        return f'background-color: {color}'
+
+    # 데이터 에디터에 스타일 적용
+    styled_df = display_df.iloc[::-1].style.map(color_temp, subset=['체온'])
+
     edited_df = st.data_editor(
-        display_df.iloc[::-1], # 최신 기록이 위로 오게 역순 표시
+        styled_df,
         hide_index=True,
         use_container_width=True,
         column_config={
             "선택": st.column_config.CheckboxColumn("선택", default=False),
+            "체온": st.column_config.NumberColumn("체온 (℃)", format="%.1f"),
             "특이사항": st.column_config.TextColumn("특이사항", width="large")
         },
-        disabled=[c for c in cols if c != '선택'] # 선택 열만 수정 가능하게 설정
+        disabled=[c for c in cols if c != '선택']
     )
 
-    # 삭제 버튼 로직
     if st.button("🗑️ 선택한 항목 삭제"):
         selected_rows = edited_df[edited_df['선택'] == True]
         if not selected_rows.empty:
-            # 선택된 행들을 원본 데이터에서 제외
             for _, row in selected_rows.iterrows():
                 st.session_state.df = st.session_state.df[
                     ~((st.session_state.df['날짜'] == row['날짜']) & 
                       (st.session_state.df['시간'] == row['시간']) & 
                       (st.session_state.df['이름'] == row['이름']) &
-                      (st.session_state.df['체온'] == row['체온']) &
-                      (st.session_state.df['특이사항'] == row['특이사항']))
+                      (st.session_state.df['체온'] == row['체온']))
                 ]
             save_data(st.session_state.df)
             st.warning("선택한 기록이 삭제되었습니다.")
             st.rerun()
-        else:
-            st.info("삭제할 항목을 먼저 선택해주세요.")
 else:
     st.info("아직 기록이 없습니다.")
