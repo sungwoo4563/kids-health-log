@@ -33,7 +33,6 @@ with st.form("health_form", clear_on_submit=True):
         name = st.selectbox("아이 선택", ["아율", "아인", "혁"])
     with col2:
         selected_date = st.date_input("날짜 선택", datetime.date.today())
-        # 요청하신 심플한 날짜 형식 (26.01.28)
         formatted_date = selected_date.strftime("%y.%m.%d")
 
     st.write("🕒 복용 시간")
@@ -70,16 +69,15 @@ if submit:
     st.success("✅ 저장되었습니다!")
     st.rerun()
 
-# 5. 기록 관리 (색상 적용)
+# 5. 기록 관리 (글자색 적용)
 st.divider()
 st.subheader("📋 기록 관리 및 삭제")
 
 if not st.session_state.df.empty:
-    # 엑셀 다운로드 버튼
     csv = st.session_state.df.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
     st.download_button(label="📥 전체 기록 엑셀 내려받기", data=csv, file_name=f"건강기록_{datetime.date.today()}.csv", mime="text/csv")
     
-    st.write("💡 체온별 색상: 🟢 ~37.5 / 🟠 37.6~38.9 / 🔴 39.0~")
+    st.write("💡 체온별 글자색: :green[~37.5] / :orange[37.6~38.9] / :red[39.0~]")
 
     # 표시용 데이터프레임 구성
     display_df = st.session_state.df.copy()
@@ -87,19 +85,19 @@ if not st.session_state.df.empty:
     cols = ['선택', '날짜', '시간', '이름', '체온', '약 종류', '용량', '특이사항']
     display_df = display_df[cols]
 
-    # 체온에 따른 색상 스타일 적용 함수
-    def color_temp(val):
-        color = 'white'
+    # 체온에 따른 글자색 스타일 적용 함수
+    def color_temp_text(val):
+        color = 'black' # 기본색
         if val <= 37.5:
-            color = '#d4edda' # 연한 초록
+            color = '#28a745' # 초록색
         elif 37.6 <= val <= 38.9:
-            color = '#fff3cd' # 연한 주황
+            color = '#fd7e14' # 주황색 (가독성을 위해 약간 진한 주황)
         elif val >= 39.0:
-            color = '#f8d7da' # 연한 빨강
-        return f'background-color: {color}'
+            color = '#dc3545' # 빨간색
+        return f'color: {color}; font-weight: bold;' # 가독성을 위해 굵게(bold) 추가
 
-    # 데이터 에디터에 스타일 적용
-    styled_df = display_df.iloc[::-1].style.map(color_temp, subset=['체온'])
+    # 스타일 적용 (글자색 변경)
+    styled_df = display_df.iloc[::-1].style.map(color_temp_text, subset=['체온'])
 
     edited_df = st.data_editor(
         styled_df,
@@ -117,6 +115,7 @@ if not st.session_state.df.empty:
         selected_rows = edited_df[edited_df['선택'] == True]
         if not selected_rows.empty:
             for _, row in selected_rows.iterrows():
+                # 원본에서 삭제할 때는 스타일링 정보가 없는 원본 값을 기준으로 비교
                 st.session_state.df = st.session_state.df[
                     ~((st.session_state.df['날짜'] == row['날짜']) & 
                       (st.session_state.df['시간'] == row['시간']) & 
