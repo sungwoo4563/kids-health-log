@@ -106,11 +106,18 @@ st.markdown("""
         border: 1px solid #ffffff !important;
         background-color: #0d1117 !important;
     }
-    [data-testid="stTable"] td, [data-testid="stTable"] th {
+    /* 표 헤더 스타일 */
+    [data-testid="stTable"] th {
+        background-color: #161b22 !important;
+        color: #ffffff !important;
+        border-bottom: 2px solid #ffffff !important;
+    }
+    /* 표 데이터 셀 스타일 (기본) - 나중에 Python 스타일러로 덮어씌워짐 */
+    [data-testid="stTable"] td {
         color: #ffffff !important;
         border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
-        background-color: #0d1117 !important;
     }
+    
     label, p, span, [data-testid="stWidgetLabel"] p, h1, h2, h3 {
         color: #ffffff !important;
         font-weight: 700 !important;
@@ -126,7 +133,7 @@ st.markdown("""
     
     /* 수정 모드 토글 스타일 */
     div[data-testid="stCheckbox"] label span {
-        color: #fbbf24 !important; /* 노란색으로 강조 */
+        color: #fbbf24 !important;
     }
 
     * { -webkit-tap-highlight-color: transparent !important; }
@@ -246,31 +253,48 @@ for i, c_name in enumerate(child_names):
             )
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'scrollZoom': False}, key=f"chart_{c_name}")
 
-# 6. 상세 기록 리스트 (삭제 기능 복구)
+# 6. 상세 기록 리스트 (색상 구분 적용)
 st.divider()
 st.subheader("📋 상세 기록")
 
-# [핵심] 수정/삭제 모드 토글 스위치
 edit_mode = st.toggle("🗑️ 기록 삭제/수정 모드 (클릭하여 활성화)", value=False)
+
+# [핵심] 행별 색상 적용 함수
+def color_rows(row):
+    # 은은한 파스텔톤 배경색 (투명도 20%)
+    styles = {
+        "아율": "background-color: rgba(255, 192, 203, 0.2); color: white;", # 은은한 핑크
+        "아인": "background-color: rgba(255, 255, 224, 0.2); color: white;", # 은은한 옐로우
+        "혁":   "background-color: rgba(173, 216, 230, 0.2); color: white;"  # 은은한 블루
+    }
+    
+    name = str(row['이름'])
+    if "아율" in name: return [styles["아율"]] * len(row)
+    if "아인" in name: return [styles["아인"]] * len(row)
+    if "혁" in name:   return [styles["혁"]] * len(row)
+    return ['color: white;'] * len(row) # 기본은 흰색 글씨
 
 if not st.session_state.df.empty:
     if edit_mode:
-        # 수정 모드: 전체 데이터를 편집 가능한 표로 보여줌
         st.info("💡 행을 선택하고 Delete 키를 누르거나, 휴지통 아이콘을 눌러 삭제하세요.")
+        editor_df = st.session_state.df.copy()
+        cols_order = ["날짜", "시간", "이름", "체온", "약 종류", "용량", "특이사항"]
+        final_cols = [c for c in cols_order if c in editor_df.columns]
+        editor_df = editor_df[final_cols]
+        
         edited_df = st.data_editor(
-            st.session_state.df,
+            editor_df,
             hide_index=True,
             use_container_width=True,
-            num_rows="dynamic", # 행 추가/삭제 허용
+            num_rows="dynamic",
             key="data_editor"
         )
-        # 데이터가 변경되었으면 저장
-        if not edited_df.equals(st.session_state.df):
+        if not edited_df.equals(st.session_state.df[final_cols]):
             st.session_state.df = edited_df
             save_data(st.session_state.df)
             st.rerun()
     else:
-        # 보기 모드: 예쁜 디자인의 탭 뷰 (삭제 불가, 보기 전용)
+        # 보기 모드
         tabs = st.tabs(["전체", f"👧 아율", f"👧 아인", f"👶 혁"])
         for i, tab in enumerate(tabs):
             n_filter = [None, "아율", "아인", "혁"][i]
@@ -278,5 +302,26 @@ if not st.session_state.df.empty:
                 display_df = st.session_state.df if n_filter is None else st.session_state.df[st.session_state.df['이름'] == n_filter]
                 if not display_df.empty:
                     show_df = display_df.copy().iloc[::-1]
+                    
+                    # 데이터 포맷팅
                     show_df['체온'] = show_df['체온'].apply(lambda x: f"{float(x):.1f}")
-                    st.table(show_df)
+                    
+                    def format_vol(x):
+                        try:
+                            val = float(str(x).replace('ml', '').strip())
+                            return f"{val:.1f}"
+                        except: return x
+                    
+                    if '용량' in show_df.columns:
+                        show_df['용량'] = show_df['용량'].apply(format_vol)
+
+                    # 칼럼 정렬
+                    cols_order = ["날짜", "시간", "이름", "체온", "약 종류", "용량", "특이사항"]
+                    final_cols = [c for c in cols_order if c in show_df.columns]
+                    show_df = show_df[final_cols]
+                    
+                    # [적용] 색상 스타일 입히기
+                    # Pandas Styler를 사용해 색상을 입힌 후 st.table로 출력
+                    styled_df = show_df.style.apply(color_rows, axis=1)
+                    
+                    st.table(styled_df)
