@@ -2,33 +2,18 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import datetime
-import json
 
 # 1. 페이지 설정
 st.set_page_config(page_title="아율·아인·혁 건강기록", page_icon="🌡️")
 st.title("🌡️ 우리 아이 건강 관리")
 
-# 2. 구글 시트 연결 (가장 안전한 방식)
-try:
-    # Secrets에서 설정값 가져오기
-    conf = st.secrets["connections"]["gsheets"]
-    
-    # service_account가 문자열로 들어왔을 경우를 대비한 처리
-    if isinstance(conf["service_account"], str):
-        creds = json.loads(conf["service_account"])
-    else:
-        creds = conf["service_account"]
-    
-    # 정식 서비스 계정 권한으로 연결
-    conn = st.connection("gsheets", type=GSheetsConnection, service_account=creds)
-except Exception as e:
-    st.error(f"⚠️ 설정 로드 실패: {e}")
-    # 실패 시 기본 연결 시도
-    conn = st.connection("gsheets", type=GSheetsConnection)
+# 2. 구글 시트 연결
+# 설정값은 Streamlit이 Secrets에서 자동으로 읽어옵니다.
+conn = st.connection("gsheets", type=GSheetsConnection)
 
 # 3. 데이터 불러오기
 try:
-    df = conn.read(ttl=0)
+    df = conn.read(ttl="0s")
     if df is None or df.empty:
         df = pd.DataFrame(columns=["일시", "이름", "체온", "약 종류", "용량", "특이사항"])
 except Exception:
@@ -63,22 +48,23 @@ if submit:
     }
     
     try:
-        # 기존 데이터에 추가
+        # 데이터 추가 및 업데이트
         updated_df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-        # 구글 시트에 업데이트
         conn.update(data=updated_df)
         
-        st.success(f"✅ {name}의 기록이 저장되었습니다! ({full_datetime})")
+        st.success(f"✅ {name}의 기록이 저장되었습니다!")
         st.rerun()
     except Exception as e:
         st.error(f"❌ 저장 실패: {e}")
-        st.info("구글 시트에서 '서비스 계정 이메일'이 [편집자]로 초대되어 있는지 다시 확인해주세요!")
+        st.info("Secrets의 JSON 형식이 올바른지, 시트에 서비스 계정이 편집자로 초대됐는지 확인해주세요.")
 
 # 6. 최근 기록 표시
 st.divider()
 st.subheader("📋 최근 기록 (최신순)")
 if not df.empty:
-    display_df = df.sort_values(by="일시", ascending=False)
+    # 일시 컬럼이 존재할 때만 정렬
+    if "일시" in df.columns:
+        display_df = df.sort_values(by="일시", ascending=False)
+    else:
+        display_df = df
     st.dataframe(display_df, use_container_width=True, hide_index=True)
-else:
-    st.info("아직 기록이 없습니다.")
