@@ -38,7 +38,7 @@ with st.form("health_form", clear_on_submit=True):
         # 용량 입력
         med_volume = st.text_input("용량 (예: 5ml, 1포)", placeholder="용량을 입력하세요")
 
-    # 특이사항 입력 (길게 쓸 수 있도록 아래로 배치)
+    # 특이사항 입력
     note = st.text_area("특이사항 (증상이나 메모)", placeholder="예: 기침이 심함, 약 먹고 바로 잠듦")
     
     submit = st.form_submit_button("💾 기록 저장 및 공유")
@@ -70,6 +70,8 @@ if submit:
 st.divider()
 st.subheader("📋 최근 기록 (최신순)")
 if not df.empty:
-    # 표를 깔끔하게 보여주기 위해 정렬
     display_df = df.sort_values(by="시간", ascending=False)
-    st.dataframe(display_df, use_container_width=True, hide_index=
+    # 아래 줄 맨 끝에 )가 있는지 확인하세요!
+    st.dataframe(display_df, use_container_width=True, hide_index=True)
+else:
+    st.info("기록이 없습니다.")
