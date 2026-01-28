@@ -26,7 +26,7 @@ st.markdown("""
 
 st.title("🌡️ 우리 아이 건강 관리 센터")
 
-# 2. 데이터 로드 및 저장 함수
+# 2. 데이터 로드 및 저장
 DATA_FILE = "health_data.csv"
 def load_data():
     if os.path.exists(DATA_FILE): return pd.read_csv(DATA_FILE)
@@ -36,7 +36,7 @@ def save_data(df): df.to_csv(DATA_FILE, index=False, encoding='utf-8-sig')
 
 if 'df' not in st.session_state: st.session_state.df = load_data()
 
-# 3. 입력 폼 (현재 시간 자동 세팅)
+# 3. 입력 폼 (생략 - 기존 유지)
 now = datetime.datetime.now()
 with st.expander("📝 새로운 기록 추가하기", expanded=False):
     with st.form("health_form", clear_on_submit=True):
@@ -73,7 +73,7 @@ with st.expander("📝 새로운 기록 추가하기", expanded=False):
             save_data(st.session_state.df)
             st.rerun()
 
-# 4. 현황 대시보드
+# 4. 현황 대시보드 (기존 유지)
 st.subheader("📊 현재 상태 요약")
 cols = st.columns(3)
 child_names = ["아율", "아인", "혁"]
@@ -93,14 +93,17 @@ for i, c_name in enumerate(child_names):
             st.markdown(f'<div class="status-card {bg}"><div><div class="card-header">{child_icons[c_name]} {c_name} {st_icon} {st_txt}</div><div class="card-temp">{latest["체온"]}°C</div><div class="card-delta">{delta_prefix} {abs(diff)}°C</div></div><div class="card-footer">🕒 {latest["날짜"]} {latest["시간"]}</div></div>', unsafe_allow_html=True)
         else: st.info(f"{c_name}: 기록 없음")
 
-# 5. 아이별 그래프 (수치 텍스트 표시 버전)
-st.subheader("📈 최근 체온 흐름 (포인트 수치 표시)")
+# 5. 아이별 그래프 (월.일 시간 표시 버전)
+st.subheader("📈 최근 체온 흐름 (월.일 시간)")
 g_cols = st.columns(3)
 
 def prepare_chart_data(df):
     if df.empty: return df
-    chart_df = df.tail(8).copy() # 너무 많으면 겹치므로 최근 8개만
-    chart_df['시간축'] = chart_df['시간'].str.split(' ').str[-1]
+    chart_df = df.tail(7).copy() # 텍스트 겹침 방지를 위해 최근 7개
+    # '26.01.28' -> '01.28' 로 간소화
+    chart_df['심플날짜'] = chart_df['날짜'].str.split('.').str[1:].str.join('.')
+    # 최종 시간축 형식: '01.28 10:30'
+    chart_df['시간축'] = chart_df['심플날짜'] + " " + chart_df['시간'].str.split(' ').str[-1]
     return chart_df
 
 for i, c_name in enumerate(child_names):
@@ -110,11 +113,9 @@ for i, c_name in enumerate(child_names):
             st.markdown(f"**{child_icons[c_name]} {c_name}**")
             chart_data = prepare_chart_data(f_df)
             
-            # 수치 표시를 위한 Vega-Lite 레이어드 차트
             st.vega_lite_chart(chart_data, {
                 'height': 220,
                 'layer': [
-                    # 1. 꺾은선 + 포인트
                     {
                         'mark': {'type': 'line', 'point': {'size': 80, 'color': '#ff4b4b'}, 'color': '#ff4b4b', 'strokeWidth': 3},
                         'encoding': {
@@ -122,7 +123,6 @@ for i, c_name in enumerate(child_names):
                             'y': {'field': '체온', 'type': 'quantitative', 'scale': {'domain': [30, 42]}, 'axis': None}
                         }
                     },
-                    # 2. 텍스트 라벨 (온도)
                     {
                         'mark': {'type': 'text', 'dy': -15, 'fontSize': 13, 'fontWeight': 'bold', 'color': 'white'},
                         'encoding': {
@@ -137,7 +137,7 @@ for i, c_name in enumerate(child_names):
         else:
             st.info(f"{c_name} 데이터 없음")
 
-# 6. 상세 기록 탭
+# 6. 상세 기록 탭 (생략)
 st.divider()
 tabs = st.tabs(["📋 전체 기록", "💖 아율", "💛 아인", "💙 혁"])
-# ... (삭제 기능 포함된 상세 기록 코드는 동일)
+# ... [이전과 동일한 탭/표 코드]
