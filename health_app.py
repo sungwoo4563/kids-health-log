@@ -4,47 +4,46 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 커서 박멸을 위한 CSS 트릭 적용
+# 1. 페이지 설정 및 커서 '투명인간' CSS 트릭 적용
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
     <style>
-    /* 1. 전체 배경 및 기본 텍스트 설정 */
+    /* 전체 배경 강제 다크 고정 */
     .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
         background-color: #0d1117 !important;
         color: #ffffff !important;
     }
 
-    /* 2. [커서 박멸 핵심 트릭] 
-       글자색을 투명하게 해서 커서를 숨기고, 
-       text-shadow로 글자 형상만 흰색으로 다시 그려냅니다. */
+    /* [커서 박멸 핵심 트릭] */
+    /* 1. 입력창의 실제 글자색(Color)을 투명(Transparent)하게 만듭니다 -> 커서도 같이 투명해짐 */
+    /* 2. text-shadow(글자 그림자)를 흰색으로 설정해, 그림자가 글씨처럼 보이게 합니다. */
     input, textarea, select, div[role="combobox"] input {
         color: transparent !important;
-        text-shadow: 0 0 0 #ffffff !important; /* 그림자로 글씨 표현 */
-        caret-color: transparent !important; /* 커서 색상 투명 */
+        text-shadow: 0 0 0 #ffffff !important;
+        caret-color: transparent !important;
         cursor: pointer !important;
     }
     
-    /* 플레이스홀더(안내 문구)는 그림자 없이 정상 표시 */
+    /* 플레이스홀더(안내 문구) 처리 */
     ::placeholder {
         color: #aaaaaa !important;
         text-shadow: none !important;
     }
 
-    /* 3. 모든 입력창 디자인: 배경 제거 + 단일 흰색 테두리 */
+    /* 입력창 배경 제거 및 단일 테두리 */
     div[data-baseweb="select"], 
     div[data-baseweb="input"], 
     div[data-baseweb="base-input"], 
     div[data-baseweb="textarea"],
     input, textarea, select {
         background-color: transparent !important;
-        background: transparent !important;
         border: 1px solid #ffffff !important;
         border-radius: 8px !important;
         box-shadow: none !important;
     }
 
-    /* 4. 중복 테두리 제거 (입력창 내부의 불필요한 선 제거) */
+    /* 중복 테두리 제거 */
     div[data-baseweb="select"] > div, 
     div[data-baseweb="base-input"] > div,
     .stSelectbox div, .stNumberInput div, .stTextInput div {
@@ -52,23 +51,21 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* 5. 모바일 터치 하이라이트 제거 */
-    * {
-        -webkit-tap-highlight-color: transparent !important;
-    }
+    /* 모바일 터치 하이라이트 제거 */
+    * { -webkit-tap-highlight-color: transparent !important; }
 
-    /* 6. 숫자 입력기 (+/- 버튼) 디자인 */
-    div[data-testid="stNumberInputStepDown"], 
-    div[data-testid="stNumberInputStepUp"] {
+    /* 상세 기록 표 스타일 */
+    [data-testid="stDataFrame"], [data-testid="stTable"], .stDataFrame {
         background-color: transparent !important;
         border: 1px solid #ffffff !important;
-        color: #ffffff !important;
     }
-    button {
+    [data-testid="stTable"] td, [data-testid="stTable"] th {
+        background-color: transparent !important;
         color: #ffffff !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
     }
 
-    /* 7. 기록 저장 버튼 (녹색 강조) */
+    /* 버튼 스타일 */
     .stButton > button {
         background-color: #238636 !important;
         color: #ffffff !important;
@@ -80,22 +77,18 @@ st.markdown("""
         text-shadow: none !important; /* 버튼 글자는 정상적으로 */
     }
 
-    /* 8. 상세 기록 표 스타일 (단일 테두리) */
-    [data-testid="stDataFrame"], [data-testid="stTable"], .stDataFrame {
-        background-color: transparent !important;
-        border: 1px solid #ffffff !important;
-    }
-    /* 표 내부 셀 배경 제거 */
-    [data-testid="stTable"] td, [data-testid="stTable"] th {
-        background-color: transparent !important;
-        color: #ffffff !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
-    }
-
     /* 라벨 텍스트 */
     label, p, span, [data-testid="stWidgetLabel"] p {
         color: #ffffff !important;
         font-weight: bold !important;
+    }
+    
+    /* 숫자 입력기 테두리 */
+    div[data-testid="stNumberInputStepDown"], 
+    div[data-testid="stNumberInputStepUp"] {
+        background-color: transparent !important;
+        border: 1px solid #ffffff !important;
+        color: #ffffff !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -180,7 +173,7 @@ for i, c_name in enumerate(child_names):
             fig.update_layout(height=180, margin=dict(l=5, r=5, t=25, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', showlegend=False, xaxis=dict(showgrid=False, color='white', tickfont=dict(size=9)), yaxis=dict(range=[34, 42], visible=False))
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}, key=f"chart_{c_name}")
 
-# 6. 상세 기록 리스트 (table 사용으로 깔끔하게)
+# 6. 상세 기록 리스트
 st.divider()
 st.subheader("📋 상세 기록")
 if not st.session_state.df.empty:
