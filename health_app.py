@@ -18,17 +18,17 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* 2. 그래프 디자인 */
+    /* 2. [복구] 그래프 디자인 - 흰색 테두리 & 그림자 부활 */
     [data-testid="stPlotlyChart"] {
-        border: none !important;
-        background-color: #161b22 !important;
+        border: 2px solid #ffffff !important; /* 흰색 테두리 복구 */
+        background-color: #0d1117 !important; /* 배경색 본래대로 */
         border-radius: 15px !important;
         padding: 15px !important;
         margin-bottom: 15px !important;
-        box-shadow: none !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important; /* 그림자 복구 */
     }
 
-    /* 3. 선택창 및 입력창 디자인 */
+    /* 3. [복구] 선택창 및 입력창 디자인 - 흰색 테두리 부활 */
     div[data-baseweb="select"] span, 
     div[data-baseweb="select"] div {
         color: #ffffff !important;
@@ -39,8 +39,8 @@ st.markdown("""
     div[data-baseweb="select"], 
     div[data-baseweb="input"], 
     div[data-baseweb="textarea"] {
-        background-color: #161b22 !important;
-        border: 1px solid #30363d !important;
+        background-color: #0d1117 !important; /* 배경색 본래대로 */
+        border: 2px solid #ffffff !important; /* 흰색 테두리 복구 */
         border-radius: 8px !important;
     }
     
@@ -55,59 +55,58 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* 4. 기록 저장 버튼 */
+    /* 4. [복구] 기록 저장 버튼 - 흰색 테두리 검정 버튼으로 복귀 */
     div[data-testid="stFormSubmitButton"] > button {
-        background-color: #238636 !important;
+        background-color: #0d1117 !important;
         color: #ffffff !important;
-        border: none !important;
+        border: 2px solid #ffffff !important; /* 흰색 테두리 복구 */
         font-weight: bold !important;
         border-radius: 8px !important;
     }
 
-    /* 5. 체온 입력기 */
+    /* 5. [복구] 체온 입력기 */
     div[data-testid="stNumberInput"] div[data-baseweb="input"] {
-        background-color: #161b22 !important;
-        border: 1px solid #30363d !important;
+        background-color: #0d1117 !important;
+        border: 2px solid #ffffff !important; /* 흰색 테두리 복구 */
     }
     div[data-testid="stNumberInput"] input {
         border: none !important;
-        background-color: #161b22 !important;
+        background-color: #0d1117 !important;
         text-shadow: 0 0 0 #ffffff !important;
         color: transparent !important;
     }
     div[data-testid="stNumberInputStepDown"], 
     div[data-testid="stNumberInputStepUp"] {
-        background-color: #161b22 !important;
-        border-left: 1px solid #30363d !important;
+        background-color: #0d1117 !important;
+        border-left: 2px solid #ffffff !important; /* 흰색 선 복구 */
         color: #ffffff !important;
     }
 
-    /* 6. [핵심] 표(DataFrame) 스타일 강제 다크모드 */
+    /* 6. [복구] 표(DataFrame) 스타일 - 흰색 테두리 복구 */
     div[data-testid="stDataFrame"] div[role="columnheader"] {
         background-color: #161b22 !important;
-        color: #e6edf3 !important;
+        color: #ffffff !important; /* 글자색 흰색 복구 */
         font-weight: bold !important;
-        border-bottom: 1px solid #30363d !important;
+        border-bottom: 2px solid #ffffff !important; /* 흰색 헤더 선 복구 */
     }
     div[data-testid="stDataFrame"] div[role="gridcell"] {
-        border-bottom: 1px solid #21262d !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important; /* 셀 구분선 흰색(반투명) 복구 */
         color: #ffffff !important;
-        background-color: #0d1117 !important; /* 셀 배경 강제 블랙 */
+        background-color: #0d1117 !important;
     }
     [data-testid="stDataFrame"] {
         background-color: #0d1117 !important;
     }
     
-    /* 툴바 숨김 */
-    [data-testid="stElementToolbar"] {
-        display: none !important;
-    }
+    /* 툴바 숨김 유지 */
+    [data-testid="stElementToolbar"] { display: none !important; }
 
     label, p, span, h1, h2, h3 {
         color: #ffffff !important;
         font-weight: 700 !important;
     }
-    hr { border-color: #30363d !important; opacity: 1 !important; }
+    /* [복구] 구분선 흰색 복구 */
+    hr { border-color: #ffffff !important; opacity: 0.3 !important; }
 
     button[data-baseweb="tab"] div p {
         color: #ffffff !important;
@@ -193,7 +192,7 @@ for i, c_name in enumerate(child_names):
             latest = child_df.iloc[-1]; t = latest["체온"]
             d_limit = 38.0 if c_name == "혁" else 39.0
             bg = "#1e3a2a" if t <= 37.5 else "#4a3a1a" if t < d_limit else "#3e1a1a"
-            st.markdown(f'<div style="background-color:{bg}; padding:15px; border:1px solid #30363d; border-radius:15px; color:white;"><div style="font-weight:bold;">{CHILD_ICONS[c_name]} {c_name}</div><div style="font-size:2rem; font-weight:800;">{t}°C</div><div style="font-size:0.8rem; opacity:0.8;">🕒 {latest["시간"]}</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="background-color:{bg}; padding:15px; border:2px solid #ffffff; border-radius:15px; color:white;"><div style="font-weight:bold;">{CHILD_ICONS[c_name]} {c_name}</div><div style="font-size:2rem; font-weight:800;">{t}°C</div><div style="font-size:0.8rem; opacity:0.8;">🕒 {latest["시간"]}</div></div>', unsafe_allow_html=True)
         else: st.info(f"{CHILD_ICONS[c_name]} {c_name}: 기록 없음")
 
 # 5. 아이별 그래프 (Plotly)
@@ -209,7 +208,6 @@ for i, c_name in enumerate(child_names):
             colors = ['#4ade80' if t <= 37.5 else '#fbbf24' if t < d_limit else '#f87171' for t in f_df['체온']]
             
             fig = go.Figure()
-            # [복구] 그래프 배경 색상 띠 복원
             fig.add_hrect(y0=34, y1=37.5, fillcolor="#28a745", opacity=0.15, line_width=0)
             fig.add_hrect(y0=37.5, y1=d_limit, fillcolor="#fd7e14", opacity=0.15, line_width=0)
             fig.add_hrect(y0=d_limit, y1=42, fillcolor="#dc3545", opacity=0.15, line_width=0)
@@ -242,7 +240,7 @@ st.subheader("📋 상세 기록")
 edit_mode = st.toggle("🗑️ 기록 삭제/수정 모드 (클릭하여 활성화)", value=False)
 
 def color_rows(row):
-    # [핵심] 배경색을 #0d1117(블랙)으로 강제 지정하여 모바일 흰색 배경 방지
+    # 모바일 배경 강제 다크모드 유지
     bg_color = "background-color: #0d1117;"
     
     text_color = "color: white;"
@@ -259,7 +257,6 @@ def color_rows(row):
         text_color = "color: #60a5fa;"
         font_weight = "font-weight: bold;"
     
-    # 모든 셀에 '배경색 + 글자색' 스타일 동시 적용
     final_style = f"{bg_color} {text_color} {font_weight}"
     return [final_style] * len(row)
 
