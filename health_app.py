@@ -4,125 +4,103 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 디자인 고도화
+# 1. 페이지 설정 및 디자인 고도화 (강력한 CSS 초기화)
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
     <style>
-    /* 1. 전체 배경 및 기본 텍스트: 다크 모드 강제 */
+    /* 전체 배경 강제 다크 고정 */
     .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
         background-color: #0d1117 !important;
         color: #ffffff !important;
     }
 
-    /* -----------------------------------------------------------
-       [기록 저장 버튼 수정] 
-       폼 제출 버튼(stFormSubmitButton)을 직접 타격하여 배경 제거
-    ----------------------------------------------------------- */
-    div[data-testid="stFormSubmitButton"] > button {
-        background-color: transparent !important; /* 배경 투명 */
-        color: #ffffff !important; /* 글자 흰색 */
-        border: 1px solid #ffffff !important; /* 흰색 테두리 */
-        font-weight: bold !important;
-        border-radius: 8px !important;
-        width: 100% !important;
-        height: 3.5em !important;
-        box-shadow: none !important;
-        text-shadow: none !important;
-    }
-    
-    /* 버튼 눌렀을 때(Active) 효과 */
-    div[data-testid="stFormSubmitButton"] > button:active,
-    div[data-testid="stFormSubmitButton"] > button:focus:not(:active) {
-        background-color: rgba(255, 255, 255, 0.1) !important;
-        border-color: #4ade80 !important;
-        color: #4ade80 !important;
-    }
-
-    /* -----------------------------------------------------------
-       [체온 기록 (Number Input) 통합 테두리]
-    ----------------------------------------------------------- */
-    /* 1. 숫자 입력창의 전체 컨테이너(껍데기)에만 테두리를 줍니다. */
-    div[data-testid="stNumberInput"] div[data-baseweb="input"] {
-        border: 1px solid #ffffff !important;
-        border-radius: 8px !important;
+    /* [핵심] 모든 입력창의 브라우저 기본 스타일 초기화 */
+    input, textarea, select {
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        appearance: none !important;
         background-color: transparent !important;
-        padding-right: 0px !important; /* 버튼과 간격 없애기 */
+        background: transparent !important;
     }
 
-    /* 2. 내부의 실제 입력칸(input)은 테두리 제거 */
-    div[data-testid="stNumberInput"] input {
-        border: none !important;
-        background-color: transparent !important;
-    }
-
-    /* 3. +/- 버튼들이 들어있는 컨테이너 배경/테두리 제거 */
-    div[data-testid="stNumberInput"] div[data-baseweb="input"] > div {
-        border: none !important;
-        background-color: transparent !important;
-    }
-
-    /* 4. +/- 개별 버튼 디자인: 배경 투명, 글자 흰색, 왼쪽 선만 살짝(구분용) */
-    div[data-testid="stNumberInputStepDown"], 
-    div[data-testid="stNumberInputStepUp"] {
-        background-color: transparent !important;
-        border: none !important;
-        color: #ffffff !important;
-        margin: 0 !important;
-    }
-    
-    /* +/- 버튼 사이의 구분선도 제거하여 완전 통일감 */
-    div[data-testid="stNumberInputStepDown"] {
-        border-right: 1px solid rgba(255,255,255,0.2) !important; /* 버튼끼리만 살짝 구분 */
-    }
-
-    /* -----------------------------------------------------------
-       [나머지 입력창 디자인 유지]
-    ----------------------------------------------------------- */
+    /* Streamlit 컴포넌트 강제 투명화 */
     div[data-baseweb="select"], 
     div[data-baseweb="input"], 
+    div[data-baseweb="base-input"], 
     div[data-baseweb="textarea"] {
         background-color: transparent !important;
         border: 1px solid #ffffff !important; 
         border-radius: 8px !important;
         box-shadow: none !important;
     }
-    
-    /* 중복 테두리 방지 */
-    div[data-baseweb="base-input"], 
-    input, textarea, select {
-        border: none !important;
+
+    /* 입력창 내부 요소들의 배경 제거 (흰색 잔상 원인) */
+    div[data-baseweb="select"] > div,
+    div[data-baseweb="base-input"] > div,
+    .stSelectbox div, .stNumberInput div, .stTextInput div {
         background-color: transparent !important;
-        box-shadow: none !important;
+        border: none !important;
     }
 
-    /* -----------------------------------------------------------
-       [커서 박멸 유지]
-    ----------------------------------------------------------- */
-    input, textarea { caret-color: transparent !important; }
-    div[data-baseweb="select"] input { opacity: 0 !important; width: 1px !important; }
-    * { -webkit-tap-highlight-color: transparent !important; }
-
-    /* 텍스트 색상 및 라벨 */
+    /* 커서 및 텍스트 선택 방지 */
+    input, textarea, [contenteditable="true"], div[role="combobox"] {
+        caret-color: transparent !important;
+        color: transparent !important;
+        text-shadow: 0 0 0 #ffffff !important;
+        cursor: pointer !important;
+    }
+    
+    /* 텍스트 색상 강제 */
     input, textarea, div[data-baseweb="select"] span {
         color: #ffffff !important;
         -webkit-text-fill-color: #ffffff !important;
-    }
-    label, p, span, [data-testid="stWidgetLabel"] p {
-        color: #ffffff !important;
-        font-weight: bold !important;
+        font-weight: 500 !important;
     }
 
-    /* 상세 기록 표 */
-    [data-testid="stDataFrame"], [data-testid="stTable"], .stDataFrame {
-        border: 1px solid #ffffff !important;
+    /* 기록 저장 버튼 배경 제거 */
+    div[data-testid="stFormSubmitButton"] > button {
         background-color: transparent !important;
+        color: #ffffff !important;
+        border: 1px solid #ffffff !important;
+        font-weight: bold !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+    }
+
+    /* 상세 기록 표 배경 제거 */
+    [data-testid="stDataFrame"], [data-testid="stTable"], .stDataFrame {
+        background-color: transparent !important;
+        border: 1px solid #ffffff !important;
     }
     [data-testid="stTable"] td, [data-testid="stTable"] th {
+        background-color: transparent !important;
         border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
-        color: #ffffff !important;
+    }
+
+    /* 숫자 입력기(+/-) 내부 흰색 배경 제거 */
+    div[data-testid="stNumberInput"] {
         background-color: transparent !important;
     }
+    div[data-testid="stNumberInput"] > div {
+        border: none !important;
+    }
+    /* +/- 버튼 자체 스타일 */
+    div[data-testid="stNumberInputStepDown"], 
+    div[data-testid="stNumberInputStepUp"] {
+        background-color: transparent !important;
+        border: 1px solid rgba(255,255,255,0.3) !important;
+        color: #ffffff !important;
+    }
+    
+    /* 입력 섹션 박스(Expander) 배경 제거 */
+    .stExpander {
+        background-color: transparent !important;
+        border: 1px solid #ffffff !important;
+        color: #ffffff !important;
+    }
+    .stExpander p { color: #ffffff !important; }
+    
     </style>
     """, unsafe_allow_html=True)
 
@@ -215,7 +193,7 @@ for i, c_name in enumerate(child_names):
             fig.update_layout(height=180, margin=dict(l=5, r=5, t=25, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', showlegend=False, xaxis=dict(showgrid=False, color='white', tickfont=dict(size=9)), yaxis=dict(range=[34, 42], visible=False))
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}, key=f"chart_{c_name}")
 
-# 6. 상세 기록 리스트 (소수점 정리 & 단일 테두리)
+# 6. 상세 기록 리스트
 st.divider()
 st.subheader("📋 상세 기록")
 if not st.session_state.df.empty:
@@ -225,6 +203,5 @@ if not st.session_state.df.empty:
         with tab:
             display_df = st.session_state.df if n_filter is None else st.session_state.df[st.session_state.df['이름'] == n_filter]
             if not display_df.empty:
-                show_df = display_df.copy().iloc[::-1]
-                show_df['체온'] = show_df['체온'].apply(lambda x: f"{float(x):.1f}")
-                st.table(show_df)
+                d_df = display_df.copy().iloc[::-1]
+                st.table(d_df)
