@@ -8,12 +8,11 @@ st.set_page_config(page_title="아율·아인·혁 건강기록", page_icon="�
 st.title("🌡️ 우리 아이 건강 관리")
 
 # 2. 구글 시트 연결
-# 라이브러리 버전에 상관없이 가장 안정적인 기본 연결 방식을 사용합니다.
+# 설정값은 Streamlit Secrets에서 자동으로 읽어오도록 가장 표준적인 방식을 사용합니다.
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# 3. 데이터 불러오기
+# 3. 데이터 불러오기 (캐시 0으로 설정하여 실시간 데이터 보장)
 try:
-    # 실시간 반영을 위해 캐시(ttl)를 0으로 설정
     df = conn.read(ttl=0)
     if df is None or df.empty:
         df = pd.DataFrame(columns=["일시", "이름", "체온", "약 종류", "용량", "특이사항"])
@@ -49,16 +48,19 @@ if submit:
     }
     
     try:
-        # 새로운 행을 추가하여 업데이트
+        # 새로운 행 생성 후 기존 데이터와 합치기
         new_data = pd.DataFrame([new_row])
         updated_df = pd.concat([df, new_data], ignore_index=True)
+        
+        # 구글 시트 업데이트 시도
         conn.update(data=updated_df)
         
         st.success(f"✅ {name}의 기록이 저장되었습니다!")
         st.rerun()
     except Exception as e:
+        # 에러 발생 시 명확한 원인 파악을 위해 에러 내용 출력
         st.error(f"❌ 저장 실패: {e}")
-        st.info("Secrets에 [connections.gsheets] 설정이 잘 되어있는지 확인해주세요.")
+        st.info("구글 시트 '공유' 설정에서 서비스 계정(streamlit-bot@...)이 [편집자]로 되어 있는지 다시 확인해주세요.")
 
 # 6. 최근 기록 표시
 st.divider()
@@ -69,3 +71,5 @@ if not df.empty:
     else:
         display_df = df
     st.dataframe(display_df, use_container_width=True, hide_index=True)
+else:
+    st.info("아직 기록이 없습니다.")
