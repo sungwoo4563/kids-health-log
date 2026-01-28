@@ -4,7 +4,7 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 초강력 CSS (커서 완전 차단 및 단일 테두리)
+# 1. 페이지 설정 및 초강력 CSS (커서 원천 차단 및 단일 테두리 고정)
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
@@ -15,29 +15,31 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* [핵심] 모든 입력창의 배경 제거 및 단일 흰색 테두리 */
+    /* [핵심] 모든 입력창의 흰색 배경을 제거하고 '단일' 흰색 테두리만 남김 */
     div[data-baseweb="select"], div[data-baseweb="input"], 
     div[data-baseweb="base-input"], div[data-baseweb="textarea"],
     input, textarea, select {
         background-color: transparent !important;
         background: transparent !important;
         color: #ffffff !important;
-        border: 1px solid #ffffff !important;
+        border: 1px solid #ffffff !important; /* 측정날짜와 동일한 단일 테두리 */
         border-radius: 8px !important;
         box-shadow: none !important;
         
-        /* 커서 및 입력 상태 원천 차단 */
+        /* 커서(Caret) 및 텍스트 선택 영역 완전 박멸 */
         caret-color: transparent !important; 
         cursor: pointer !important;
+        user-select: none !important;
+        -webkit-user-select: none !important;
     }
 
-    /* 선택창(Selectbox) 내부에서 검색 커서가 생기지 않도록 차단 */
+    /* 선택창(Selectbox) 내부에서 검색 커서가 생성되는 레이어 강제 비활성화 */
     div[role="combobox"] input {
         pointer-events: none !important;
         caret-color: transparent !important;
     }
 
-    /* 중복 테두리 현상 해결 (내부 박스 테두리 제거) */
+    /* 중복 테두리 현상 해결 (내부 박스의 이중 라인 제거) */
     div[data-baseweb="select"] > div, 
     div[data-baseweb="base-input"] > div,
     .stSelectbox div, .stNumberInput div, .stTextInput div {
@@ -52,14 +54,14 @@ st.markdown("""
         border-radius: 10px !important;
     }
 
-    /* 표 내부 셀 배경 완전 투명화 */
+    /* 표 내부 셀 배경 및 텍스트 가독성 강화 */
     [data-testid="stTable"] td, [data-testid="stTable"] th, 
     div[data-cell-contents], .stDataFrame div {
         background-color: transparent !important;
         color: #ffffff !important;
     }
 
-    /* 기록 저장 버튼 강조 */
+    /* 기록 저장 버튼 (녹색 강조 및 흰색 테두리) */
     .stButton > button {
         background-color: #238636 !important;
         color: #ffffff !important;
@@ -68,19 +70,31 @@ st.markdown("""
         border-radius: 8px !important;
         height: 3.5em !important;
         width: 100% !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
 
-    /* 라벨 강조 */
+    /* 라벨 텍스트 흰색 굵게 고정 */
     label, p, span, [data-testid="stWidgetLabel"] p {
         color: #ffffff !important;
-        font-weight: bold !important;
+        font-weight: 800 !important;
+    }
+    
+    /* 숫자 입력기 (+/-) 버튼 디자인 보정 */
+    div[data-testid="stNumberInputStepDown"], 
+    div[data-testid="stNumberInputStepUp"] {
+        background-color: #21262d !important;
+        border: 1px solid #ffffff !important;
+    }
+    div[data-testid="stNumberInputStepDown"] button, 
+    div[data-testid="stNumberInputStepUp"] button {
+        color: #ffffff !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
 st.title("🌡️ 우리 아이 건강 관리 센터")
 
-# 2. 데이터 관리
+# 2. 데이터 관리 로직
 DATA_FILE = "health_data.csv"
 def load_data():
     if os.path.exists(DATA_FILE):
@@ -92,7 +106,7 @@ def save_data(df): df.to_csv(DATA_FILE, index=False, encoding='utf-8-sig')
 
 if 'df' not in st.session_state: st.session_state.df = load_data()
 
-# 3. 퀵 기록 센터
+# 3. 퀵 기록 센터 (KST 한국 시간 반영)
 now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
 with st.expander("📝 새로운 건강 기록 입력", expanded=True):
     with st.form("health_form", clear_on_submit=True):
@@ -140,7 +154,7 @@ for i, c_name in enumerate(child_names):
             st.markdown(f'<div style="background-color:{bg}; padding:15px; border:1px solid #ffffff; border-radius:15px; color:white;"><div style="font-weight:bold;">{child_icons[c_name]} {c_name}</div><div style="font-size:2rem; font-weight:800;">{t}°C</div><div style="font-size:0.8rem; opacity:0.8;">🕒 {latest["시간"]}</div></div>', unsafe_allow_html=True)
         else: st.info(f"{c_name}: 기록 없음")
 
-# 5. 상세 기록 리스트
+# 5. 상세 기록 리스트 (깔끔한 단일 테두리 테이블)
 st.divider()
 st.subheader("📋 상세 기록")
 if not st.session_state.df.empty:
@@ -150,4 +164,4 @@ if not st.session_state.df.empty:
         with tab:
             display_df = st.session_state.df if n_filter is None else st.session_state.df[st.session_state.df['이름'] == n_filter]
             if not display_df.empty:
-                st.table(display_df.iloc[::-1]) # 역순 정렬 표
+                st.table(display_df.iloc[::-1]) # 가장 깔끔한 배경 제거 테이블
