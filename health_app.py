@@ -36,7 +36,7 @@ def save_data(df): df.to_csv(DATA_FILE, index=False, encoding='utf-8-sig')
 
 if 'df' not in st.session_state: st.session_state.df = load_data()
 
-# 3. 입력 폼 (생략 - 기존 유지)
+# 3. 입력 폼 (기존 유지)
 now = datetime.datetime.now()
 with st.expander("📝 새로운 기록 추가하기", expanded=False):
     with st.form("health_form", clear_on_submit=True):
@@ -73,7 +73,7 @@ with st.expander("📝 새로운 기록 추가하기", expanded=False):
             save_data(st.session_state.df)
             st.rerun()
 
-# 4. 현황 대시보드 (아이별 맞춤 기준 적용)
+# 4. 현황 대시보드
 st.subheader("📊 현재 상태 요약")
 cols = st.columns(3)
 child_names = ["아율", "아인", "혁"]
@@ -88,25 +88,20 @@ for i, c_name in enumerate(child_names):
             prev_temp = child_df.iloc[-2]['체온'] if len(child_df) > 1 else t
             diff = round(t - prev_temp, 1)
             
-            # --- 고열 기준 로직 수정 ---
-            if c_name == "혁":
-                # 혁이(영유아): 38도 이상 고열
-                if t <= 37.5: st_txt, st_icon, bg = "정상", "🟢", "status-normal"
-                elif t < 38.0: st_txt, st_icon, bg = "미열", "🟠", "status-caution"
-                else: st_txt, st_icon, bg = "고열", "🔴", "status-danger"
-            else:
-                # 아율, 아인(어린이): 기존 기준 유지
-                if t <= 37.5: st_txt, st_icon, bg = "정상", "🟢", "status-normal"
-                elif t <= 38.9: st_txt, st_icon, bg = "미열", "🟠", "status-caution"
-                else: st_txt, st_icon, bg = "고열", "🔴", "status-danger"
-            # --------------------------
+            # 혁이(영유아)와 누나들의 고열 기준 분리
+            danger_limit = 38.0 if c_name == "혁" else 39.0
+            caution_limit = 37.5
+
+            if t <= caution_limit: st_txt, st_icon, bg = "정상", "🟢", "status-normal"
+            elif t < danger_limit: st_txt, st_icon, bg = "미열", "🟠", "status-caution"
+            else: st_txt, st_icon, bg = "고열", "🔴", "status-danger"
 
             delta_prefix = "↑" if diff > 0 else "↓" if diff < 0 else ""
             st.markdown(f'<div class="status-card {bg}"><div><div class="card-header">{child_icons[c_name]} {c_name} {st_icon} {st_txt}</div><div class="card-temp">{t}°C</div><div class="card-delta">{delta_prefix} {abs(diff)}°C</div></div><div class="card-footer">🕒 {latest["날짜"]} {latest["시간"]}</div></div>', unsafe_allow_html=True)
         else: st.info(f"{c_name}: 기록 없음")
 
-# 5. 아이별 그래프 (두 줄 표시 유지)
-st.subheader("📈 최근 체온 흐름")
+# 5. 아이별 그래프 (배경색 영역 추가)
+st.subheader("📈 최근 체온 흐름 (상태별 배경 영역)")
 g_cols = st.columns(3)
 
 def prepare_chart_data(df):
@@ -123,12 +118,24 @@ for i, c_name in enumerate(child_names):
         if not f_df.empty:
             st.markdown(f"**{child_icons[c_name]} {c_name}**")
             chart_data = prepare_chart_data(f_df)
+            
+            # 아이별 고열 기준선 설정
+            d_limit = 38.0 if c_name == "혁" else 39.0
+            
             st.vega_lite_chart(chart_data, {
                 'height': 220,
                 'layer': [
-                    {'mark': {'type': 'line', 'point': {'size': 80, 'color': '#ff4b4b'}, 'color': '#ff4b4b', 'strokeWidth': 3},
+                    # 1. 배경 영역 (정상/미열/고열)
+                    {'mark': {'type': 'rect', 'opacity': 0.1, 'color': '#28a745'}, 'encoding': {'y': {'datum': 30}, 'y2': {'datum': 37.5}}}, # 정상
+                    {'mark': {'type': 'rect', 'opacity': 0.1, 'color': '#fd7e14'}, 'encoding': {'y': {'datum': 37.5}, 'y2': {'datum': d_limit}}}, # 미열
+                    {'mark': {'type': 'rect', 'opacity': 0.1, 'color': '#dc3545'}, 'encoding': {'y': {'datum': d_limit}, 'y2': {'datum': 42}}}, # 고열
+                    
+                    # 2. 꺾은선 + 포인트
+                    {'mark': {'type': 'line', 'point': {'size': 80, 'color': 'white'}, 'color': 'white', 'strokeWidth': 3},
                      'encoding': {'x': {'field': '시간축', 'type': 'nominal', 'axis': {'title': None, 'labelAngle': 0}},
                                    'y': {'field': '체온', 'type': 'quantitative', 'scale': {'domain': [30, 42]}, 'axis': None}}},
+                    
+                    # 3. 텍스트 라벨
                     {'mark': {'type': 'text', 'dy': -15, 'fontSize': 13, 'fontWeight': 'bold', 'color': 'white'},
                      'encoding': {'x': {'field': '시간축', 'type': 'nominal'}, 'y': {'field': '체온', 'type': 'quantitative'},
                                    'text': {'field': '체온', 'type': 'quantitative', 'format': '.1f'}}}
@@ -136,7 +143,7 @@ for i, c_name in enumerate(child_names):
             }, use_container_width=True)
         else: st.info(f"{c_name} 데이터 없음")
 
-# 6. 상세 기록 탭
+# 6. 상세 기록 탭 (기존 유지)
 st.divider()
 tabs = st.tabs(["📋 전체 기록", "💖 아율", "💛 아인", "💙 혁"])
-# ... (상세 기록 및 삭제 로직 코드 동일)
+# ... [이후 코드 생략]
