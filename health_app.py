@@ -4,7 +4,7 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 디자인 (그래프 줌 차단 + 기존 디자인 유지)
+# 1. 페이지 설정 및 디자인
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
@@ -19,7 +19,7 @@ st.markdown("""
     [data-testid="stPlotlyChart"] {
         border: 2px solid #ffffff !important;
         border-radius: 15px !important;
-        padding: 15px !important;
+        padding: 10px !important; /* 내부 패딩 */
         background-color: #0d1117 !important;
         margin-bottom: 15px !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
@@ -211,19 +211,25 @@ for i, c_name in enumerate(child_names):
             fig.add_hrect(y0=d_limit, y1=42, fillcolor="#dc3545", opacity=0.15, line_width=0)
             fig.add_trace(go.Scatter(x=f_df['축'], y=f_df['체온'], mode='lines+markers+text', line=dict(color='white', width=2), marker=dict(color=colors, size=10, line=dict(color='white', width=1)), text=f_df['체온'], textposition="top center", textfont=dict(color="white", size=11)))
             
-            # [수정] 줌 인/아웃 고정 설정 (fixedrange) & 드래그 비활성화 (dragmode)
+            # [수정] 그래프 여백 및 축 텍스트 설정
             fig.update_layout(
                 title=dict(text=f"<b>{c_name}</b>", font=dict(size=18, color="white"), x=0.5, xanchor='center'),
-                height=220,
-                margin=dict(l=25, r=25, t=50, b=25), 
+                height=250, # 높이를 충분히 줘서 하단 글씨 공간 확보
+                # l, r을 30으로 맞춰 대칭 확보, b를 60으로 늘려 글씨 잘림 방지
+                margin=dict(l=30, r=30, t=50, b=60), 
                 paper_bgcolor='rgba(0,0,0,0)', 
                 plot_bgcolor='rgba(0,0,0,0)', 
                 showlegend=False, 
-                dragmode=False, # 드래그(Pan) 비활성화
-                xaxis=dict(showgrid=False, color='white', tickfont=dict(size=10), fixedrange=True), # X축 줌 고정
-                yaxis=dict(range=[34, 42], visible=False, fixedrange=True) # Y축 줌 고정
+                dragmode=False,
+                xaxis=dict(
+                    showgrid=False, 
+                    color='white', 
+                    tickfont=dict(size=11, weight='bold'), # 글씨 크기 UP
+                    fixedrange=True,
+                    range=[-0.5, 6.5] # 데이터 포인트 7개가 중앙에 오도록 강제 정렬
+                ), 
+                yaxis=dict(range=[34, 42], visible=False, fixedrange=True)
             )
-            # config 설정으로 줌 스크롤까지 확실히 차단
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'scrollZoom': False}, key=f"chart_{c_name}")
 
 # 6. 상세 기록 리스트
