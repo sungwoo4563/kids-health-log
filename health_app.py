@@ -101,38 +101,17 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* 9. [핵심 수정] 표(Table) 모바일 최적화 스타일 (강제 적용) */
-    
-    /* 전체 표 폰트 사이즈 축소 및 테두리 설정 */
-    [data-testid="stTable"] {
-        font-size: 13px !important;
-        font-family: 'Pretendard', sans-serif !important;
-    }
-    
-    /* 헤더(맨 윗줄) 스타일 */
-    [data-testid="stTable"] thead th {
+    /* 9. 표(DataFrame) 스타일 조정 */
+    /* 데이터프레임 헤더 색상 */
+    div[data-testid="stDataFrame"] div[role="columnheader"] {
         background-color: #161b22 !important;
         color: #ffffff !important;
-        border-bottom: 2px solid #ffffff !important;
-        padding: 8px 4px !important;
-        text-align: center !important;
-        white-space: nowrap !important; /* 줄바꿈 절대 금지 */
+        font-weight: bold !important;
+        border-bottom: 1px solid #ffffff !important;
     }
-    
-    /* 데이터 셀 스타일 */
-    [data-testid="stTable"] tbody td {
+    /* 데이터프레임 셀 텍스트 */
+    div[data-testid="stDataFrame"] div[role="gridcell"] {
         color: #ffffff !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
-        padding: 6px 4px !important; /* 여백을 줄여서 빡빡하게 */
-        text-align: center !important;
-        white-space: nowrap !important; /* 줄바꿈 절대 금지 (한 줄 유지) */
-        vertical-align: middle !important;
-    }
-
-    /* [필살기] 첫 번째 컬럼(인덱스 번호) 숨기기 */
-    [data-testid="stTable"] thead th:first-child,
-    [data-testid="stTable"] tbody td:first-child {
-        display: none !important;
     }
     
     label, p, span, [data-testid="stWidgetLabel"] p, h1, h2, h3 {
@@ -148,7 +127,6 @@ st.markdown("""
         font-size: 1rem !important;
     }
     
-    /* 수정 모드 토글 스타일 */
     div[data-testid="stCheckbox"] label span { color: #fbbf24 !important; }
 
     * { -webkit-tap-highlight-color: transparent !important; }
@@ -268,7 +246,7 @@ for i, c_name in enumerate(child_names):
             )
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'scrollZoom': False}, key=f"chart_{c_name}")
 
-# 6. 상세 기록 리스트
+# 6. 상세 기록 리스트 (st.dataframe으로 정렬 문제 해결)
 st.divider()
 st.subheader("📋 상세 기록")
 
@@ -290,7 +268,6 @@ if not st.session_state.df.empty:
     if edit_mode:
         st.info("💡 행을 선택하고 Delete 키를 누르거나, 휴지통 아이콘을 눌러 삭제하세요.")
         editor_df = st.session_state.df.copy()
-        # [수정] nan 제거 및 텍스트 정리
         editor_df = editor_df.fillna("")
         
         cols_order = ["날짜", "시간", "이름", "체온", "약 종류", "용량", "특이사항"]
@@ -317,11 +294,8 @@ if not st.session_state.df.empty:
                 display_df = st.session_state.df if n_filter is None else st.session_state.df[st.session_state.df['이름'] == n_filter]
                 if not display_df.empty:
                     show_df = display_df.copy().iloc[::-1]
+                    show_df = show_df.fillna("") 
                     
-                    # [수정] 데이터 클리닝: nan -> 빈칸
-                    show_df = show_df.fillna("") # 하이픈(-) 대신 완전 빈칸으로 처리해서 깔끔하게
-                    
-                    # "선택 안 함" 텍스트도 너무 기니까 빈칸으로 날리기
                     if '약 종류' in show_df.columns:
                         show_df['약 종류'] = show_df['약 종류'].replace("선택 안 함", "")
 
@@ -340,6 +314,14 @@ if not st.session_state.df.empty:
                     final_cols = [c for c in cols_order if c in show_df.columns]
                     show_df = show_df[final_cols]
                     
-                    # 스타일 적용 + 인덱스 숨기기(hide) -> CSS로도 숨기고 여기서도 숨김(이중 잠금)
-                    styled_df = show_df.style.apply(color_rows, axis=1).hide(axis="index")
-                    st.table(styled_df)
+                    # [핵심] st.dataframe 사용 (st.table 대체)
+                    # 색상은 style로 적용하고, hide(axis="index")로 번호 숨김
+                    styled_df = show_df.style.apply(color_rows, axis=1)
+                    
+                    # use_container_width=True로 모바일 화면 꽉 채움
+                    st.dataframe(
+                        styled_df, 
+                        use_container_width=True, 
+                        hide_index=True,
+                        height=None # 높이 자동 조절
+                    )
