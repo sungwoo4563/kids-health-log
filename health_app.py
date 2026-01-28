@@ -23,11 +23,10 @@ with st.form("health_form", clear_on_submit=True):
     col1, col2 = st.columns(2)
     with col1:
         name = st.selectbox("아이 선택", ["아율", "아인", "혁"])
-        # 날짜와 시간을 하나의 입력창으로 관리
-        # 기록하는 시점의 날짜/시간이 기본값
-        recorded_at = st.date_input("날짜 및 시간 선택", datetime.datetime.now())
-        # (참고) Streamlit의 date_input은 기본적으로 날짜만 선택하지만, 
-        # 아래 저장 로직에서 현재 시각과 합쳐서 정교하게 저장합니다.
+        
+        # [핵심] 날짜와 시간을 한 번에 선택할 수 있는 입력창
+        # 현재 날짜와 시간이 기본값으로 세팅됩니다.
+        recorded_at = st.datetime_input("언제 먹였나요? (날짜 및 시간)", datetime.datetime.now())
         
     with col2:
         temp = st.number_input("현재 체온 (℃)", min_value=34.0, max_value=42.0, value=36.5, step=0.1, format="%.1f")
@@ -46,9 +45,8 @@ with st.form("health_form", clear_on_submit=True):
 
 # 5. 저장 로직
 if submit:
-    # 현재 시각의 '분'까지 포함하여 저장
-    now_time = datetime.datetime.now().strftime("%H:%M")
-    full_datetime = f"{recorded_at.strftime('%Y-%m-%d')} {now_time}"
+    # 성우님이 선택한 날짜와 시간을 문자열로 변환
+    full_datetime = recorded_at.strftime('%Y-%m-%d %H:%M')
     
     new_data = pd.DataFrame([{
         "일시": full_datetime, 
