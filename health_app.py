@@ -102,14 +102,20 @@ st.markdown("""
     }
 
     /* 9. 표(DataFrame) 스타일 조정 */
+    /* 헤더 배경을 진한 검정으로 고정 */
     div[data-testid="stDataFrame"] div[role="columnheader"] {
         background-color: #161b22 !important;
         color: #ffffff !important;
         font-weight: bold !important;
         border-bottom: 1px solid #ffffff !important;
     }
+    /* 셀 기본 텍스트 색상 */
     div[data-testid="stDataFrame"] div[role="gridcell"] {
         color: #ffffff !important;
+    }
+    /* 데이터프레임 전체 배경 강제 어둡게 */
+    [data-testid="stDataFrame"] {
+        background-color: #0d1117 !important;
     }
     
     label, p, span, [data-testid="stWidgetLabel"] p, h1, h2, h3 {
@@ -251,10 +257,11 @@ st.subheader("📋 상세 기록")
 edit_mode = st.toggle("🗑️ 기록 삭제/수정 모드 (클릭하여 활성화)", value=False)
 
 def color_rows(row):
+    # [핵심] 진한 배경색 + 흰색 글씨 = 초고대비 (가독성 최우선)
     styles = {
-        "아율": "background-color: rgba(219, 39, 119, 0.2); color: white;", 
-        "아인": "background-color: rgba(5, 150, 105, 0.2); color: white;",  
-        "혁":   "background-color: rgba(37, 99, 235, 0.2); color: white;"   
+        "아율": "background-color: #5e1e33; color: white;", # 🔴 진한 와인색
+        "아인": "background-color: #1e4a2e; color: white;", # 🟢 진한 녹색
+        "혁":   "background-color: #1e3a5e; color: white;"  # 🔵 진한 네이비
     }
     name = str(row['이름'])
     if "아율" in name: return [styles["아율"]] * len(row)
@@ -268,7 +275,6 @@ if not st.session_state.df.empty:
         editor_df = st.session_state.df.copy()
         editor_df = editor_df.fillna("")
         
-        # [수정] 수정 모드에서도 '이름'을 맨 앞으로
         cols_order = ["이름", "날짜", "시간", "체온", "약 종류", "용량", "특이사항"]
         final_cols = [c for c in cols_order if c in editor_df.columns]
         editor_df = editor_df[final_cols]
@@ -309,11 +315,11 @@ if not st.session_state.df.empty:
                     if '용량' in show_df.columns:
                         show_df['용량'] = show_df['용량'].apply(format_vol)
 
-                    # [핵심] 보기 모드에서 '이름'을 맨 앞으로 정렬
                     cols_order = ["이름", "날짜", "시간", "체온", "약 종류", "용량", "특이사항"]
                     final_cols = [c for c in cols_order if c in show_df.columns]
                     show_df = show_df[final_cols]
                     
+                    # 스타일 적용
                     styled_df = show_df.style.apply(color_rows, axis=1)
                     
                     # 높이 자동 계산 (35px = 행 높이, 3px = 버퍼)
