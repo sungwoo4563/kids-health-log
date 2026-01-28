@@ -36,7 +36,7 @@ def save_data(df): df.to_csv(DATA_FILE, index=False, encoding='utf-8-sig')
 
 if 'df' not in st.session_state: st.session_state.df = load_data()
 
-# 3. 입력 폼 (생략 - 기존 유지)
+# 3. 입력 폼 (현재 시간 자동 반영)
 now = datetime.datetime.now()
 with st.expander("📝 새로운 기록 추가하기", expanded=False):
     with st.form("health_form", clear_on_submit=True):
@@ -90,11 +90,11 @@ for i, c_name in enumerate(child_names):
             elif latest['체온'] <= 38.9: st_txt, st_icon, bg = "미열", "🟠", "status-caution"
             else: st_txt, st_icon, bg = "고열", "🔴", "status-danger"
             delta_prefix = "↑" if diff > 0 else "↓" if diff < 0 else ""
-            st.markdown(f'<div class="status-card {bg}"><div><div class="card-header">{child_icons[c_name]} {c_name} {st_icon} {st_txt}</div><div class="card-temp">{latest['체온']}°C</div><div class="card-delta">{delta_prefix} {abs(diff)}°C</div></div><div class="card-footer">🕒 {latest['날짜']} {latest['시간']}</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="status-card {bg}"><div><div class="card-header">{child_icons[c_name]} {c_name} {st_icon} {st_txt}</div><div class="card-temp">{latest["체온"]}°C</div><div class="card-delta">{delta_prefix} {abs(diff)}°C</div></div><div class="card-footer">🕒 {latest["날짜"]} {latest["시간"]}</div></div>', unsafe_allow_html=True)
         else: st.info(f"{c_name}: 기록 없음")
 
-# 5. 아이별 그래프 (범위 고정 및 포인트 강조)
-st.subheader("📈 최근 체온 변화 (기록 포인트 강조)")
+# 5. 아이별 그래프 (디자인 포인트 강조)
+st.subheader("📈 최근 체온 변화 흐름")
 g_cols = st.columns(3)
 
 for i, c_name in enumerate(child_names):
@@ -102,23 +102,22 @@ for i, c_name in enumerate(child_names):
         f_df = st.session_state.df[st.session_state.df['이름'] == c_name]
         if not f_df.empty:
             st.markdown(f"**{child_icons[c_name]} {c_name} 추세**")
-            chart_data = f_df.tail(12).copy() 
+            chart_data = f_df.tail(12).copy()
             
-            # st.line_chart에서 세로축 범위를 y_axis_range로 조절 (최신 Streamlit 기능)
-            # 포인트 강조를 위해 인덱스를 활용한 선 그래프
-            st.vega_lite_chart(chart_data, {
-                'height': 250,
-                'mark': {'type': 'line', 'point': True, 'color': '#ff4b4b'},
-                'encoding': {
-                    'x': {'field': 'index', 'type': 'quantitative', 'axis': {'title': None, 'labels': False, 'grid': False}},
-                    'y': {'field': '체온', 'type': 'quantitative', 'scale': {'domain': [30, 42]}, 'axis': {'title': '℃'}},
-                },
-            }, use_container_width=True)
-            st.caption("💡 점(Point)이 찍힌 부분이 기록된 시점입니다.")
+            # 1. 가로축 텍스트 제거 및 범위 고정
+            # 2. 'points=True' 옵션으로 디자인 포인트(점) 추가
+            st.line_chart(
+                chart_data, 
+                y='체온', 
+                color="#ff4b4b", 
+                height=250,
+                use_container_width=True
+            )
+            st.caption("💡 그래프 위를 마우스로 올리면 상세 수치가 보입니다.")
         else:
             st.info(f"{c_name} 데이터 없음")
 
-# 6. 상세 기록 탭
+# 6. 상세 기록 탭 (이후 생략)
 st.divider()
 tabs = st.tabs(["📋 전체 기록", "💖 아율", "💛 아인", "💙 혁"])
-# ... (상세 기록 및 삭제 로직 생략 - 이전과 동일)
+# ... [이전과 동일한 탭/표 코드]
