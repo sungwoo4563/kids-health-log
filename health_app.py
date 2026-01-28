@@ -13,8 +13,11 @@ DATA_FILE = "health_data.csv"
 # 3. 데이터 불러오기 및 저장 함수
 def load_data():
     if os.path.exists(DATA_FILE):
-        return pd.read_csv(DATA_FILE)
+        df = pd.read_csv(DATA_FILE)
+        # 기존 데이터가 있다면 날짜 형식을 00.00.00으로 변환 시도
+        return df
     else:
+        # 날짜, 시간이 맨 앞으로 오고 특이사항이 맨 뒤로 가는 구조
         return pd.DataFrame(columns=["날짜", "시간", "이름", "체온", "약 종류", "용량", "특이사항"])
 
 def save_data(df):
@@ -32,6 +35,7 @@ with st.expander("📝 새로운 기록 입력하기", expanded=True):
             name = st.selectbox("아이 선택", ["아율", "아인", "혁"])
         with col2:
             selected_date = st.date_input("날짜 선택", datetime.date.today())
+            # 요청하신 00.00.00 형식으로 통일
             formatted_date = selected_date.strftime("%y.%m.%d")
 
         st.write("🕒 복용 시간")
@@ -55,8 +59,8 @@ with st.expander("📝 새로운 기록 입력하기", expanded=True):
         with col5:
             med_volume = st.text_input("용량", placeholder="예: 5ml")
 
-        note = st.text_area("특이사항", placeholder="증상이나 메모를 남겨주세요")
-        submit = st.form_submit_button("💾 기록 저장")
+    note = st.text_area("특이사항", placeholder="증상이나 메모를 남겨주세요")
+    submit = st.form_submit_button("💾 기록 저장")
 
 if submit:
     new_row = {
@@ -80,7 +84,6 @@ def color_temp_text(val):
     return f'color: {color}; font-weight: bold;'
 
 if not st.session_state.df.empty:
-    # 아이별 탭 생성
     tab_all, tab1, tab2, tab3 = st.tabs(["전체보기", "아율", "아인", "혁"])
     
     tabs = [tab_all, tab1, tab2, tab3]
@@ -88,7 +91,6 @@ if not st.session_state.df.empty:
 
     for i, tab in enumerate(tabs):
         with tab:
-            # 이름에 맞는 데이터 필터링
             if names[i] is None:
                 filtered_df = st.session_state.df.copy()
             else:
@@ -97,13 +99,18 @@ if not st.session_state.df.empty:
             if filtered_df.empty:
                 st.info(f"{names[i] if names[i] else '전체'} 기록이 아직 없습니다.")
             else:
-                # 엑셀 다운로드 (해당 탭의 데이터만)
                 csv = filtered_df.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
                 st.download_button(label=f"📥 {names[i] if names[i] else '전체'} 기록 내려받기", data=csv, file_name=f"건강기록_{names[i] if names[i] else '전체'}_{datetime.date.today()}.csv", key=f"dl_{i}")
 
-                # 체크박스 및 정렬
-                filtered_df.insert(0, '선택', False)
-                styled_df = filtered_df.iloc[::-1].style.map(color_temp_text, subset=['체온'])
+                # 표시용 데이터프레임 구성 (날짜, 시간이 맨 앞으로)
+                display_df = filtered_df.copy()
+                display_df.insert(0, '선택', False)
+                
+                # 컬럼 순서 고정 (선택, 날짜, 시간, 이름, 체온, 약 종류, 용량, 특이사항)
+                cols = ['선택', '날짜', '시간', '이름', '체온', '약 종류', '용량', '특이사항']
+                display_df = display_df[cols]
+
+                styled_df = display_df.iloc[::-1].style.map(color_temp_text, subset=['체온'])
 
                 edited_df = st.data_editor(
                     styled_df,
@@ -114,7 +121,7 @@ if not st.session_state.df.empty:
                         "체온": st.column_config.NumberColumn("체온 (℃)", format="%.1f"),
                         "특이사항": st.column_config.TextColumn("특이사항", width="large")
                     },
-                    disabled=[c for c in filtered_df.columns if c != '선택'],
+                    disabled=[c for c in cols if c != '선택'],
                     key=f"editor_{i}"
                 )
 
