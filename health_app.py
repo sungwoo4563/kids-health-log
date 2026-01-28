@@ -4,42 +4,52 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 초강력 CSS (커서 원천 차단 및 단일 테두리 고정)
+# 1. 페이지 설정 및 디자인 (커서 박멸 최우선)
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
     <style>
-    /* 전체 배경 및 텍스트 강제 다크 고정 */
+    /* 1. 전체 배경 강제 다크 고정 */
     .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
         background-color: #0d1117 !important;
         color: #ffffff !important;
     }
 
-    /* [핵심] 모든 입력창의 흰색 배경을 제거하고 '단일' 흰색 테두리만 남김 */
-    div[data-baseweb="select"], div[data-baseweb="input"], 
-    div[data-baseweb="base-input"], div[data-baseweb="textarea"],
+    /* 2. [커서 박멸] 모든 입력창의 커서 색상을 투명하게 변경 */
+    input, textarea, [contenteditable="true"] {
+        caret-color: transparent !important; /* 깜빡이는 커서 숨김 */
+        cursor: pointer !important; /* 마우스 커서도 손가락 모양으로 */
+    }
+    
+    /* 3. [모바일 터치] 터치 시 생기는 파란색/회색 하이라이트 박스 제거 */
+    * {
+        -webkit-tap-highlight-color: transparent !important;
+        -webkit-touch-callout: none !important; 
+    }
+
+    /* 4. 모든 입력창(Selectbox, Input) 스타일 통일 */
+    /* 흰색 배경 제거 + 단일 흰색 테두리 + 커서 숨김 */
+    div[data-baseweb="select"], 
+    div[data-baseweb="input"], 
+    div[data-baseweb="base-input"], 
+    div[data-baseweb="textarea"],
     input, textarea, select {
         background-color: transparent !important;
         background: transparent !important;
         color: #ffffff !important;
-        border: 1px solid #ffffff !important; /* 측정날짜와 동일한 단일 테두리 */
+        border: 1px solid #ffffff !important;
         border-radius: 8px !important;
         box-shadow: none !important;
-        
-        /* 커서(Caret) 및 텍스트 선택 영역 완전 박멸 */
-        caret-color: transparent !important; 
-        cursor: pointer !important;
-        user-select: none !important;
-        -webkit-user-select: none !important;
     }
-
-    /* 선택창(Selectbox) 내부에서 검색 커서가 생성되는 레이어 강제 비활성화 */
-    div[role="combobox"] input {
-        pointer-events: none !important;
+    
+    /* Selectbox 내부의 실제 input 요소(여기가 커서 범인) 투명화 처리 */
+    div[data-baseweb="select"] input {
+        color: transparent !important; /* 검색 글자도 안 보이게 처리 */
         caret-color: transparent !important;
+        text-shadow: 0 0 0 #ffffff !important; /* 선택된 텍스트만 보이게 트릭 */
     }
 
-    /* 중복 테두리 현상 해결 (내부 박스의 이중 라인 제거) */
+    /* 5. 중복 테두리 제거 (내부 컨테이너 테두리 0) */
     div[data-baseweb="select"] > div, 
     div[data-baseweb="base-input"] > div,
     .stSelectbox div, .stNumberInput div, .stTextInput div {
@@ -47,21 +57,20 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* 상세 기록 표(DataFrame) 배경 박멸 및 단일 테두리 */
+    /* 6. 상세 기록 표(Table) 스타일 */
     [data-testid="stDataFrame"], [data-testid="stTable"], .stDataFrame {
         background-color: transparent !important;
         border: 1px solid #ffffff !important;
-        border-radius: 10px !important;
     }
-
-    /* 표 내부 셀 배경 및 텍스트 가독성 강화 */
-    [data-testid="stTable"] td, [data-testid="stTable"] th, 
-    div[data-cell-contents], .stDataFrame div {
+    
+    /* 표 내부 셀 배경 제거 */
+    [data-testid="stTable"] td, [data-testid="stTable"] th {
         background-color: transparent !important;
         color: #ffffff !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
     }
 
-    /* 기록 저장 버튼 (녹색 강조 및 흰색 테두리) */
+    /* 7. 기록 저장 버튼 */
     .stButton > button {
         background-color: #238636 !important;
         color: #ffffff !important;
@@ -70,31 +79,26 @@ st.markdown("""
         border-radius: 8px !important;
         height: 3.5em !important;
         width: 100% !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
 
-    /* 라벨 텍스트 흰색 굵게 고정 */
+    /* 8. 라벨 텍스트 */
     label, p, span, [data-testid="stWidgetLabel"] p {
         color: #ffffff !important;
-        font-weight: 800 !important;
+        font-weight: bold !important;
     }
     
-    /* 숫자 입력기 (+/-) 버튼 디자인 보정 */
+    /* 숫자 입력기 (+/-) 버튼 테두리 */
     div[data-testid="stNumberInputStepDown"], 
     div[data-testid="stNumberInputStepUp"] {
-        background-color: #21262d !important;
+        background-color: transparent !important;
         border: 1px solid #ffffff !important;
-    }
-    div[data-testid="stNumberInputStepDown"] button, 
-    div[data-testid="stNumberInputStepUp"] button {
-        color: #ffffff !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
 st.title("🌡️ 우리 아이 건강 관리 센터")
 
-# 2. 데이터 관리 로직
+# 2. 데이터 관리
 DATA_FILE = "health_data.csv"
 def load_data():
     if os.path.exists(DATA_FILE):
@@ -106,7 +110,7 @@ def save_data(df): df.to_csv(DATA_FILE, index=False, encoding='utf-8-sig')
 
 if 'df' not in st.session_state: st.session_state.df = load_data()
 
-# 3. 퀵 기록 센터 (KST 한국 시간 반영)
+# 3. 퀵 기록 센터
 now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
 with st.expander("📝 새로운 건강 기록 입력", expanded=True):
     with st.form("health_form", clear_on_submit=True):
@@ -154,7 +158,25 @@ for i, c_name in enumerate(child_names):
             st.markdown(f'<div style="background-color:{bg}; padding:15px; border:1px solid #ffffff; border-radius:15px; color:white;"><div style="font-weight:bold;">{child_icons[c_name]} {c_name}</div><div style="font-size:2rem; font-weight:800;">{t}°C</div><div style="font-size:0.8rem; opacity:0.8;">🕒 {latest["시간"]}</div></div>', unsafe_allow_html=True)
         else: st.info(f"{c_name}: 기록 없음")
 
-# 5. 상세 기록 리스트 (깔끔한 단일 테두리 테이블)
+# 5. 아이별 그래프 (Plotly)
+st.subheader("📈 최근 체온 흐름")
+g_cols = st.columns(3)
+for i, c_name in enumerate(child_names):
+    with g_cols[i]:
+        f_df = st.session_state.df[st.session_state.df['이름'] == c_name].tail(7)
+        if not f_df.empty:
+            f_df['축'] = f_df['날짜'].str[3:] + "<br>" + f_df['시간'].str.split(' ').str[-1]
+            d_limit = 38.0 if c_name == "혁" else 39.0
+            colors = ['#4ade80' if t <= 37.5 else '#fbbf24' if t < d_limit else '#f87171' for t in f_df['체온']]
+            fig = go.Figure()
+            fig.add_hrect(y0=34, y1=37.5, fillcolor="#28a745", opacity=0.15, line_width=0)
+            fig.add_hrect(y0=37.5, y1=d_limit, fillcolor="#fd7e14", opacity=0.15, line_width=0)
+            fig.add_hrect(y0=d_limit, y1=42, fillcolor="#dc3545", opacity=0.15, line_width=0)
+            fig.add_trace(go.Scatter(x=f_df['축'], y=f_df['체온'], mode='lines+markers+text', line=dict(color='white', width=2), marker=dict(color=colors, size=10, line=dict(color='white', width=1)), text=f_df['체온'], textposition="top center", textfont=dict(color="white", size=11)))
+            fig.update_layout(height=180, margin=dict(l=5, r=5, t=25, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', showlegend=False, xaxis=dict(showgrid=False, color='white', tickfont=dict(size=9)), yaxis=dict(range=[34, 42], visible=False))
+            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}, key=f"chart_{c_name}")
+
+# 6. 상세 기록 리스트 (st.table 사용으로 깔끔하게)
 st.divider()
 st.subheader("📋 상세 기록")
 if not st.session_state.df.empty:
@@ -164,4 +186,4 @@ if not st.session_state.df.empty:
         with tab:
             display_df = st.session_state.df if n_filter is None else st.session_state.df[st.session_state.df['이름'] == n_filter]
             if not display_df.empty:
-                st.table(display_df.iloc[::-1]) # 가장 깔끔한 배경 제거 테이블
+                st.table(display_df.iloc[::-1]) # 단순 표가 스타일 적용이 더 확실합니다.
