@@ -4,75 +4,58 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 디자인 고도화
+# 1. 페이지 설정 및 디자인 (커서 박멸 + 단일 테두리 유지)
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
     <style>
-    /* 1. 전체 배경 및 기본 텍스트 설정 (다크 모드 강제 고정) */
+    /* 전체 배경 및 텍스트 설정 */
     .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
         background-color: #0d1117 !important;
         color: #ffffff !important;
     }
 
-    /* -----------------------------------------------------------------
-       [커서 박멸 솔루션] 
-       1. 실제 입력 텍스트(input)의 색상을 '투명'으로 만듭니다. (커서도 같이 투명해짐)
-       2. text-shadow로 글자 모양만 흰색으로 다시 그려냅니다.
-       3. caret-color: transparent로 커서 색상을 아예 없앱니다.
-    ----------------------------------------------------------------- */
+    /* 커서 박멸 및 텍스트 섀도우 트릭 */
     input, textarea, select {
         color: transparent !important;
         text-shadow: 0 0 0 #ffffff !important;
         caret-color: transparent !important;
         cursor: pointer !important;
     }
-    
-    /* 검색창 내부 입력 요소도 동일하게 처리 */
     div[role="combobox"] input {
         color: transparent !important;
         text-shadow: 0 0 0 #ffffff !important;
         caret-color: transparent !important;
     }
-
-    /* 플레이스홀더(안내 문구)는 그림자 없이 회색으로 */
     ::placeholder {
         color: #aaaaaa !important;
         text-shadow: none !important;
     }
 
-    /* -----------------------------------------------------------------
-       [테두리 단일화 솔루션]
-       내부의 모든 테두리를 없애고, 가장 바깥쪽 컨테이너에만 테두리를 줍니다.
-    ----------------------------------------------------------------- */
-    
-    /* 1. 가장 바깥쪽 컨테이너에만 흰색 테두리 적용 */
+    /* 입력창 디자인: 흰색 배경 제거 + 단일 흰색 테두리 */
     div[data-baseweb="select"], 
     div[data-baseweb="input"], 
     div[data-baseweb="base-input"], 
-    div[data-baseweb="textarea"] {
+    div[data-baseweb="textarea"],
+    input, textarea, select {
         background-color: transparent !important;
         border: 1px solid #ffffff !important;
         border-radius: 8px !important;
         box-shadow: none !important;
     }
 
-    /* 2. 내부 요소들의 테두리 및 배경 싹 다 제거 (겹침 방지) */
-    div[data-baseweb="select"] *, 
-    div[data-baseweb="input"] *, 
-    div[data-baseweb="base-input"] * {
+    /* 중복 테두리 제거 */
+    div[data-baseweb="select"] > div, 
+    div[data-baseweb="base-input"] > div,
+    .stSelectbox div, .stNumberInput div, .stTextInput div {
         border: none !important;
         background-color: transparent !important;
     }
 
-    /* 3. 모바일 터치 시 발생하는 파란색/회색 박스 제거 */
+    /* 모바일 터치 하이라이트 제거 */
     * { -webkit-tap-highlight-color: transparent !important; }
 
-    /* -----------------------------------------------------------------
-       [기타 요소 디자인]
-    ----------------------------------------------------------------- */
-
-    /* 상세 기록 표 디자인 (단일 테두리) */
+    /* 상세 기록 표 디자인 */
     [data-testid="stDataFrame"], [data-testid="stTable"], .stDataFrame {
         border: 1px solid #ffffff !important;
         background-color: transparent !important;
@@ -82,7 +65,7 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* 저장 버튼 (초록색 + 흰색 테두리) */
+    /* 저장 버튼 */
     .stButton > button {
         background-color: #238636 !important;
         color: #ffffff !important;
@@ -91,20 +74,28 @@ st.markdown("""
         border-radius: 8px !important;
         height: 3.5em !important;
         width: 100% !important;
-        text-shadow: none !important; /* 버튼 글자는 그림자 효과 제외 */
+        text-shadow: none !important;
     }
 
-    /* 숫자 입력기(+/-) 버튼도 단일 테두리 느낌으로 */
-    div[data-testid="stNumberInputStepDown"], 
-    div[data-testid="stNumberInputStepUp"] {
-        border: none !important; /* 내부 테두리 제거 */
-        background-color: rgba(255,255,255,0.1) !important; /* 살짝 배경을 줘서 구분 */
+    /* 경고 메시지 (Warning) 스타일 */
+    .stAlert {
+        background-color: rgba(255, 200, 0, 0.1) !important;
+        color: #ffffff !important;
+        border: 1px solid #e3b341 !important;
     }
 
-    /* 라벨 텍스트 흰색 */
+    /* 라벨 텍스트 */
     label, p, span, [data-testid="stWidgetLabel"] p {
         color: #ffffff !important;
         font-weight: bold !important;
+    }
+    
+    /* 숫자 입력기 테두리 */
+    div[data-testid="stNumberInputStepDown"], 
+    div[data-testid="stNumberInputStepUp"] {
+        background-color: transparent !important;
+        border: 1px solid #ffffff !important;
+        color: #ffffff !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -145,6 +136,30 @@ with st.expander("📝 새로운 건강 기록 입력", expanded=True):
         with c4: med = st.selectbox("💊 약 종류", ["선택 안 함", "맥시부펜", "세토펜", "아침약", "점심약", "저녁약", "기타"])
         with c5: vol = st.text_input("💉 용량", placeholder="예: 5ml")
         note = st.text_area("🗒️ 특이사항")
+
+        # ---------------------------------------------------------
+        # [기능 추가] 약 교차 복용 확인 로직
+        # ---------------------------------------------------------
+        if med in ["맥시부펜", "세토펜"]: # 해열제를 선택했을 때만 체크
+            # 현재 아이의 과거 기록 가져오기
+            child_history = st.session_state.df[st.session_state.df['이름'] == name]
+            # 해열제 먹인 기록만 필터링
+            fever_meds = child_history[child_history['약 종류'].isin(["맥시부펜", "세토펜"])]
+            
+            if not fever_meds.empty:
+                last_med = fever_meds.iloc[-1]['약 종류']
+                last_time = fever_meds.iloc[-1]['시간']
+                last_date = fever_meds.iloc[-1]['날짜']
+                
+                # 방금 선택한 약(med)이 마지막에 먹인 약(last_med)과 같다면 경고
+                if med == last_med:
+                    st.warning(
+                        f"⚠️ **교차 복용 확인 필요!**\n\n"
+                        f"{name}에게 마지막으로 먹인 약도 **[{last_med}]** 입니다.\n"
+                        f"({last_date} {last_time})\n\n"
+                        f"같은 계열의 해열제 연속 복용이 맞는지 확인해주세요."
+                    )
+        # ---------------------------------------------------------
 
         if st.form_submit_button("💾 기록 저장"):
             f_date = d.strftime("%y.%m.%d")
@@ -189,7 +204,7 @@ for i, c_name in enumerate(child_names):
             fig.update_layout(height=180, margin=dict(l=5, r=5, t=25, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', showlegend=False, xaxis=dict(showgrid=False, color='white', tickfont=dict(size=9)), yaxis=dict(range=[34, 42], visible=False))
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}, key=f"chart_{c_name}")
 
-# 6. 상세 기록 리스트
+# 6. 상세 기록 리스트 (소수점 정리)
 st.divider()
 st.subheader("📋 상세 기록")
 if not st.session_state.df.empty:
@@ -199,4 +214,10 @@ if not st.session_state.df.empty:
         with tab:
             display_df = st.session_state.df if n_filter is None else st.session_state.df[st.session_state.df['이름'] == n_filter]
             if not display_df.empty:
-                st.table(display_df.iloc[::-1])
+                # [기능 추가] 보여주기용 데이터프레임 복사 후 포맷팅
+                show_df = display_df.copy().iloc[::-1]
+                # 체온을 소수점 1자리 문자열로 변환 (예: 37.5)
+                show_df['체온'] = show_df['체온'].apply(lambda x: f"{float(x):.1f}")
+                
+                # 깔끔한 테이블 출력
+                st.table(show_df)
