@@ -37,7 +37,7 @@ def save_data(df): df.to_csv(DATA_FILE, index=False, encoding='utf-8-sig')
 
 if 'df' not in st.session_state: st.session_state.df = load_data()
 
-# 3. 입력 폼 (기존 유지)
+# 3. 입력 폼
 now = datetime.datetime.now()
 with st.expander("📝 새로운 기록 추가하기", expanded=False):
     with st.form("health_form", clear_on_submit=True):
@@ -93,7 +93,7 @@ for i, c_name in enumerate(child_names):
             st.markdown(f'<div class="status-card {bg}"><div><div class="card-header">{child_icons[c_name]} {c_name} | {icon} {txt}</div><div class="card-temp">{t}°C</div><div class="card-delta">{delta_prefix} {abs(diff)}°C</div></div><div class="card-footer">🕒 {latest["날짜"]} {latest["시간"]}</div></div>', unsafe_allow_html=True)
         else: st.info(f"{c_name}: 기록 없음")
 
-# 5. 아이별 그래프 (ID 중복 에러 해결 버전)
+# 5. 아이별 그래프
 st.subheader("📈 최근 체온 흐름")
 g_cols = st.columns(3)
 
@@ -101,16 +101,11 @@ for i, c_name in enumerate(child_names):
     with g_cols[i]:
         f_df = st.session_state.df[st.session_state.df['이름'] == c_name].tail(7)
         if not f_df.empty:
-            # x축 레이블 생성
             f_df['시간축'] = f_df['날짜'].str[3:] + "<br>" + f_df['시간'].str.split(' ').str[-1]
             d_limit = 38.0 if c_name == "혁" else 39.0
-            
-            # 포인트 컬러 설정
             colors = ['#28a745' if t <= 37.5 else '#fd7e14' if t < d_limit else '#dc3545' for t in f_df['체온']]
 
             fig = go.Figure()
-            
-            # 배경 영역 추가
             fig.add_hrect(y0=30, y1=37.5, fillcolor="#28a745", opacity=0.1, line_width=0)
             fig.add_hrect(y0=37.5, y1=d_limit, fillcolor="#fd7e14", opacity=0.1, line_width=0)
             fig.add_hrect(y0=d_limit, y1=42, fillcolor="#dc3545", opacity=0.1, line_width=0)
@@ -131,13 +126,44 @@ for i, c_name in enumerate(child_names):
                 xaxis=dict(showgrid=False, zeroline=False, color='white', tickfont=dict(size=10)),
                 yaxis=dict(range=[34, 42], showgrid=False, zeroline=False, visible=False)
             )
-            
-            # 에러 해결 포인트: key=c_name 추가하여 고유성 확보
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}, key=f"chart_{c_name}")
-        else:
-            st.info(f"{c_name} 데이터 없음")
+        else: st.info(f"{c_name} 데이터 없음")
 
-# 6. 상세 기록 탭
+# 6. 상세 기록 탭 (복구 완료)
 st.divider()
 tabs = st.tabs(["📋 전체 기록", "💖 아율", "💛 아인", "💙 혁"])
-# ... (상세 기록 표 및 삭제 기능은 이전과 동일)
+
+for i, tab in enumerate(tabs):
+    n_filter = [None, "아율", "아인", "혁"][i]
+    with tab:
+        f_df = st.session_state.df if n_filter is None else st.session_state.df[st.session_state.df['이름'] == n_filter]
+        if not f_df.empty:
+            d_df = f_df.copy().iloc[::-1]
+            d_df.insert(0, '선택', False)
+            
+            def style_temp(val):
+                # 표에서도 혁이 전용 기준 적용
+                limit = 38.0 if n_filter == "혁" else 39.0
+                color = '#28a745' if val <= 37.5 else '#fd7e14' if val < limit else '#dc3545'
+                return f'color: {color}; font-weight: bold;'
+            
+            edited = st.data_editor(
+                d_df.style.map(style_temp, subset=['체온']), 
+                hide_index=True, 
+                use_container_width=True, 
+                key=f"ed_{i}", 
+                column_config={"선택": st.column_config.CheckboxColumn("삭제")}
+            )
+            
+            if st.button(f"🗑️ 항목 삭제", key=f"del_{i}"):
+                to_del = edited[edited['선택'] == True]
+                for _, r in to_del.iterrows():
+                    # 이름이 섞여있을 수 있는 '전체 기록' 탭을 위해 이름 조건 추가
+                    target_name = r['이름'] if n_filter is None else n_filter
+                    st.session_state.df = st.session_state.df[~((st.session_state.df['날짜'] == r['날짜']) & 
+                                                               (st.session_state.df['시간'] == r['시간']) & 
+                                                               (st.session_state.df['이름'] == target_name))]
+                save_data(st.session_state.df)
+                st.rerun()
+        else:
+            st.info("기록된 데이터가 없습니다.")
