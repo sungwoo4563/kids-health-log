@@ -62,7 +62,7 @@ if submit:
     
     # 구글 시트 업데이트
     try:
-        conn.update(data=updated_df)
+        conn.update(data=new_data)
         st.success(f"✅ {name}의 기록이 저장되었습니다! ({full_datetime})")
         st.rerun()
     except Exception as e:
