@@ -14,7 +14,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 try:
     df = conn.read(ttl=0)
 except Exception:
-    df = pd.DataFrame(columns=["시간", "이름", "체온", "약 종류", "용량", "특이사항"])
+    df = pd.DataFrame(columns=["날짜", "시간", "이름", "체온", "약 종류", "용량", "특이사항"])
 
 # 4. 입력 폼
 with st.form("health_form", clear_on_submit=True):
@@ -23,11 +23,12 @@ with st.form("health_form", clear_on_submit=True):
     col1, col2 = st.columns(2)
     with col1:
         name = st.selectbox("아이 선택", ["아율", "아인", "혁"])
-        # 소수점 한자리까지 입력 설정 (step=0.1)
-        temp = st.number_input("현재 체온 (℃)", min_value=34.0, max_value=42.0, value=36.5, step=0.1, format="%.1f")
-    
+        # 날짜와 시간 선택 기능 추가 (현재 시점이 기본값)
+        input_date = st.date_input("날짜", datetime.date.today())
+        input_time = st.time_input("기록 시간 (약 먹인 시간)", datetime.datetime.now().time())
+        
     with col2:
-        # 약 종류 선택 메뉴
+        temp = st.number_input("현재 체온 (℃)", min_value=34.0, max_value=42.0, value=36.5, step=0.1, format="%.1f")
         med_type = st.selectbox("복용한 약", [
             "선택 안 함", 
             "맥시부펜(부루펜 계열)", 
@@ -35,19 +36,21 @@ with st.form("health_form", clear_on_submit=True):
             "아침약", "점심약", "저녁약", 
             "기타"
         ])
-        # 용량 입력
         med_volume = st.text_input("용량 (예: 5ml, 1포)", placeholder="용량을 입력하세요")
 
-    # 특이사항 입력
     note = st.text_area("특이사항 (증상이나 메모)", placeholder="예: 기침이 심함, 약 먹고 바로 잠듦")
     
     submit = st.form_submit_button("💾 기록 저장 및 공유")
 
 # 5. 저장 로직
 if submit:
-    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    # 선택한 날짜와 시간을 합쳐서 저장
+    date_str = input_date.strftime("%Y-%m-%d")
+    time_str = input_time.strftime("%H:%M")
+    
     new_data = pd.DataFrame([{
-        "시간": now, 
+        "날짜": date_str,
+        "시간": time_str, 
         "이름": name, 
         "체온": temp, 
         "약 종류": med_type, 
@@ -61,7 +64,7 @@ if submit:
     # 구글 시트 업데이트
     try:
         conn.update(data=updated_df)
-        st.success(f"✅ {name}의 기록이 저장되었습니다!")
+        st.success(f"✅ {name}의 {time_str} 기록이 저장되었습니다!")
         st.rerun()
     except Exception as e:
         st.error("저장에 실패했습니다. 구글 시트 권한을 확인해주세요.")
@@ -70,8 +73,8 @@ if submit:
 st.divider()
 st.subheader("📋 최근 기록 (최신순)")
 if not df.empty:
-    display_df = df.sort_values(by="시간", ascending=False)
-    # 아래 줄 맨 끝에 )가 있는지 확인하세요!
+    # 날짜와 시간 순으로 정렬해서 보여줌
+    display_df = df.sort_values(by=["날짜", "시간"], ascending=False)
     st.dataframe(display_df, use_container_width=True, hide_index=True)
 else:
     st.info("기록이 없습니다.")
