@@ -36,22 +36,23 @@ def save_data(df):
 if 'df' not in st.session_state:
     st.session_state.df = load_data()
 
-# 3. 퀵 기록 센터 (시/분 선택 기능 복구)
-now = datetime.datetime.now()
+# 3. 퀵 기록 센터 (한국 시간 동기화)
+# 서버 시간(UTC)에 9시간을 더해 한국 시간(KST)으로 변환
+now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
+
 with st.expander("📝 새로운 건강 기록 입력 (클릭)", expanded=True):
     with st.form("health_form", clear_on_submit=True):
         c1, c2 = st.columns(2)
         with c1: name = st.selectbox("아이 이름", ["아율", "아인", "혁"])
         with c2: d = st.date_input("측정 날짜", now.date())
         
-        st.write("🕒 측정 시간 (현재 시각이 기본값입니다)")
+        st.write(f"🕒 측정 시간 (현재 한국 시각: {now.strftime('%H:%M')})")
         t1, t2, t3 = st.columns(3)
         with t1: ampm = st.selectbox("오전/오후", ["오전", "오후"], index=(0 if now.hour < 12 else 1))
         with t2: 
             h12_val = 12 if now.hour % 12 == 0 else now.hour % 12
             hour = st.selectbox("시", [i for i in range(1, 13)], index=h12_val-1)
         with t3:
-            # 분은 1분 단위로 상세하게 선택 가능하도록 설정
             minute = st.selectbox("분", [f"{i:02d}" for i in range(60)], index=now.minute)
         
         st.divider()
