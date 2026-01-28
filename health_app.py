@@ -15,6 +15,7 @@ def load_data():
     if os.path.exists(DATA_FILE):
         return pd.read_csv(DATA_FILE)
     else:
+        # '일시' 제거, 날짜/시간을 앞쪽으로, 특이사항을 뒤쪽으로 구성
         return pd.DataFrame(columns=["날짜", "시간", "이름", "체온", "약 종류", "용량", "특이사항"])
 
 def save_data(df):
@@ -33,6 +34,7 @@ with st.form("health_form", clear_on_submit=True):
         name = st.selectbox("아이 선택", ["아율", "아인", "혁"])
     with col2:
         selected_date = st.date_input("날짜 선택", datetime.date.today())
+        # 성우님이 요청하신 26년 01월 28일 형식
         formatted_date = selected_date.strftime("%y년 %m월 %d일")
 
     st.write("🕒 복용 시간")
@@ -69,7 +71,7 @@ if submit:
     st.success("✅ 저장되었습니다!")
     st.rerun()
 
-# 5. 전체 기록 확인 및 선택 삭제
+# 5. 기록 관리 (체크박스 삭제 포함)
 st.divider()
 st.subheader("📋 기록 관리 및 삭제")
 
@@ -85,34 +87,38 @@ if not st.session_state.df.empty:
     
     st.write("💡 삭제할 항목을 왼쪽 체크박스에서 선택하고 아래 '선택 항목 삭제' 버튼을 누르세요.")
     
-    # 최신순으로 보여주기 위해 인덱스 역순 정렬
+    # 표시용 데이터프레임 구성 (날짜, 시간 순서 및 선택 박스 추가)
     display_df = st.session_state.df.copy()
-    display_df['선택'] = False
-    # 컬럼 순서 조정 (선택을 맨 앞으로)
-    cols = ['선택'] + [c for c in display_df.columns if c != '선택']
+    display_df.insert(0, '선택', False) # 맨 앞에 체크박스용 열 추가
+
+    # 컬럼 순서 강제 지정 (선택, 날짜, 시간, 이름, 체온, 약 종류, 용량, 특이사항)
+    cols = ['선택', '날짜', '시간', '이름', '체온', '약 종류', '용량', '특이사항']
     display_df = display_df[cols]
 
-    # 데이터 에디터 (체크박스 기능 포함)
+    # 데이터 에디터 실행
     edited_df = st.data_editor(
-        display_df.iloc[::-1], # 최신순
+        display_df.iloc[::-1], # 최신 기록이 위로 오게 역순 표시
         hide_index=True,
         use_container_width=True,
-        column_config={"선택": st.column_config.CheckboxColumn(required=True)}
+        column_config={
+            "선택": st.column_config.CheckboxColumn("선택", default=False),
+            "특이사항": st.column_config.TextColumn("특이사항", width="large")
+        },
+        disabled=[c for c in cols if c != '선택'] # 선택 열만 수정 가능하게 설정
     )
 
-    # 삭제 버튼
+    # 삭제 버튼 로직
     if st.button("🗑️ 선택한 항목 삭제"):
-        # 체크되지 않은 항목들만 남기기
-        # 역순으로 표시된 데이터에서 체크된 항목의 원본 인덱스를 찾아 삭제
         selected_rows = edited_df[edited_df['선택'] == True]
         if not selected_rows.empty:
-            # 원본 df에서 날짜, 시간, 이름, 체온이 모두 일치하는 행을 제외하고 남김
+            # 선택된 행들을 원본 데이터에서 제외
             for _, row in selected_rows.iterrows():
                 st.session_state.df = st.session_state.df[
                     ~((st.session_state.df['날짜'] == row['날짜']) & 
                       (st.session_state.df['시간'] == row['시간']) & 
                       (st.session_state.df['이름'] == row['이름']) &
-                      (st.session_state.df['체온'] == row['체온']))
+                      (st.session_state.df['체온'] == row['체온']) &
+                      (st.session_state.df['특이사항'] == row['특이사항']))
                 ]
             save_data(st.session_state.df)
             st.warning("선택한 기록이 삭제되었습니다.")
