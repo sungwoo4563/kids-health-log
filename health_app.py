@@ -39,7 +39,7 @@ def save_data(df): df.to_csv(DATA_FILE, index=False, encoding='utf-8-sig')
 
 if 'df' not in st.session_state: st.session_state.df = load_data()
 
-# 3. 입력 폼 (생략 - 기존과 동일)
+# 3. 입력 폼 (현재 시간 자동 세팅)
 now = datetime.datetime.now()
 with st.expander("📝 새로운 기록 추가하기", expanded=False):
     with st.form("health_form", clear_on_submit=True):
@@ -76,12 +76,13 @@ with st.expander("📝 새로운 기록 추가하기", expanded=False):
             save_data(st.session_state.df)
             st.rerun()
 
-# 4. 현황 대시보드
+# 4. 현황 대시보드 (카드)
 st.subheader("📊 현재 상태 요약")
 cols = st.columns(3)
+child_names = ["아율", "아인", "혁"]
 child_icons = {"아율": "👧", "아인": "👧", "혁": "👶"}
 
-for i, c_name in enumerate(["아율", "아인", "혁"]):
+for i, c_name in enumerate(child_names):
     child_df = st.session_state.df[st.session_state.df['이름'] == c_name]
     with cols[i]:
         if not child_df.empty:
@@ -95,46 +96,49 @@ for i, c_name in enumerate(["아율", "아인", "혁"]):
             st.markdown(f'<div class="status-card {bg}"><div><div class="card-header">{child_icons[c_name]} {c_name} {st_icon} {st_txt}</div><div class="card-temp">{latest['체온']}°C</div><div class="card-delta">{delta_prefix} {abs(diff)}°C</div></div><div class="card-footer">🕒 {latest['날짜']} {latest['시간']}</div></div>', unsafe_allow_html=True)
         else: st.info(f"{c_name}: 기록 없음")
 
-# 5. 그래프 및 상세 기록
-st.divider()
-tab_all, tab1, tab2, tab3 = st.tabs(["📊 통합 추이", "💖 아율", "💛 아인", "💙 혁"])
+# 5. 아이별 그래프 동시 노출 (3열 배치)
+st.subheader("📈 아이별 체온 변화 추이")
+g_cols = st.columns(3)
 
 def prepare_chart_data(df):
     if df.empty: return df
     chart_df = df.copy()
-    # 날짜에서 연도(26.)를 빼고 '01.28'만 남겨 가로 길이를 줄입니다.
     chart_df['심플날짜'] = chart_df['날짜'].str.replace(r'^\d{2}\.', '', regex=True)
-    # 가로로 표시될 최종 시간 텍스트
     chart_df['시간축'] = chart_df['심플날짜'] + " " + chart_df['시간']
     return chart_df
 
-with tab_all:
-    if not st.session_state.df.empty:
-        st.subheader("📈 아율·아인·혁 체온 동시 비교")
-        all_data = prepare_chart_data(st.session_state.df)
-        # 데이터가 많을 때 가로축이 눕지 않도록 높이와 너비를 충분히 확보
-        st.line_chart(all_data, x='시간축', y='체온', color='이름', height=400)
-        st.caption("💡 가로축을 읽기 편하도록 날짜 형식을 간소화했습니다 (월.일 시간)")
-    else: st.info("데이터가 없습니다.")
-
-for i, tab in enumerate([tab1, tab2, tab3]):
-    c_name = ["아율", "아인", "혁"][i]
-    with tab:
+for i, c_name in enumerate(child_names):
+    with g_cols[i]:
         f_df = st.session_state.df[st.session_state.df['이름'] == c_name]
         if not f_df.empty:
-            st.subheader(f"📈 {c_name} 개인 추이")
-            st.line_chart(prepare_chart_data(f_df), x='시간축', y='체온', color="#ff4b4b", height=350)
+            st.markdown(f"**{child_icons[c_name]} {c_name} 그래프**")
+            chart_data = prepare_chart_data(f_df)
+            st.line_chart(chart_data, x='시간축', y='체온', color="#ff4b4b", height=250)
+        else:
+            st.caption(f"{c_name} 데이터 없음")
+
+# 6. 상세 기록 탭
+st.divider()
+tabs = st.tabs(["📋 전체 기록", "💖 아율", "💛 아인", "💙 혁"])
+
+for i, tab in enumerate(tabs):
+    name_filter = [None, "아율", "아인", "혁"][i]
+    with tab:
+        f_df = st.session_state.df if name_filter is None else st.session_state.df[st.session_state.df['이름'] == name_filter]
+        if not f_df.empty:
+            csv = f_df.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
+            st.download_button(f"📥 {name_filter or '전체'} 엑셀 받기", csv, f"{name_filter or 'all'}.csv", "text/csv", key=f"dl_{i}")
             
-            st.divider()
             d_df = f_df.copy().iloc[::-1]
             d_df.insert(0, '선택', False)
             def style_temp(val):
                 color = '#28a745' if val <= 37.5 else '#fd7e14' if val <= 38.9 else '#dc3545'
                 return f'color: {color}; font-weight: bold;'
-            edited = st.data_editor(d_df.style.map(style_temp, subset=['체온']), hide_index=True, use_container_width=True, key=f"ed_{c_name}", column_config={"선택": st.column_config.CheckboxColumn("삭제")})
-            if st.button(f"🗑️ {c_name} 선택 삭제", key=f"del_{c_name}"):
+            edited = st.data_editor(d_df.style.map(style_temp, subset=['체온']), hide_index=True, use_container_width=True, key=f"ed_{i}", column_config={"선택": st.column_config.CheckboxColumn("삭제")})
+            
+            if st.button(f"🗑️ 선택 삭제", key=f"del_{i}"):
                 to_delete = edited[edited['선택'] == True]
                 for _, r in to_delete.iterrows():
-                    st.session_state.df = st.session_state.df[~((st.session_state.df['날짜'] == r['날짜']) & (st.session_state.df['시간'] == r['시간']) & (st.session_state.df['이름'] == c_name))]
+                    st.session_state.df = st.session_state.df[~((st.session_state.df['날짜'] == r['날짜']) & (st.session_state.df['시간'] == r['시간']) & (st.session_state.df['이름'] == (r['이름'] if name_filter is None else name_filter)))]
                 save_data(st.session_state.df)
                 st.rerun()
