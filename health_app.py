@@ -4,44 +4,53 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 디자인 (배경 색상 강제 주입)
+# 1. 페이지 설정 및 디자인 (라벨 텍스트 화이트닝)
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
     <style>
-    /* 1. 기본 다크 모드 설정 */
+    /* 1. 배경 설정: 다크 모드 강제 */
     .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
         background-color: #0d1117 !important;
         color: #ffffff !important;
     }
 
-    /* 2. [핵심 해결책] 입력창 배경을 '투명'이 아닌 '검은색'으로 강제 페인트칠 
-       - 이렇게 하면 뒤에 흰색이 숨어있어도 보이지 않습니다.
+    /* 2. [핵심 수정] 라벨(제목) 텍스트 강제 흰색 고정 
+       - 아이 이름, 시간, 약 종류 등 모든 위젯의 제목을 하얗게 만듭니다.
     */
+    div[data-testid="stWidgetLabel"],
+    div[data-testid="stWidgetLabel"] p,
+    div[data-testid="stWidgetLabel"] label,
+    label, p, span, h1, h2, h3, .stMarkdown p {
+        color: #ffffff !important;
+        font-weight: 700 !important; /* 굵게 해서 더 잘 보이게 */
+    }
+
+    /* 3. 입력창 배경을 '검은색'으로 강제 페인트칠 (흰색 배경 방지) */
     div[data-baseweb="select"], 
     div[data-baseweb="input"], 
     div[data-baseweb="textarea"] {
-        background-color: #0d1117 !important; /* 투명(X) -> 검정(O) */
+        background-color: #0d1117 !important;
         border: 2px solid #ffffff !important; 
         border-radius: 8px !important;
     }
 
-    /* 3. 기본 텍스트 색상 (평소 상태) -> 흰색 */
+    /* 4. 입력창 내부 텍스트 색상 (평소 상태) */
     input, textarea, div[data-baseweb="select"] span {
         color: #ffffff !important;
         -webkit-text-fill-color: #ffffff !important;
         font-weight: 600 !important;
-        background-color: #0d1117 !important; /* 입력 필드 자체도 검게 */
+        background-color: #0d1117 !important;
     }
 
-    /* 4. 입력창을 눌렀을 때(Focus) -> 흰색 배경 + 검은 글씨 (가독성 보장) */
+    /* 5. 입력창을 눌렀을 때(Focus) -> 흰색 배경 + 검은 글씨 */
     input:focus, textarea:focus, select:focus {
         background-color: #ffffff !important;
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
     }
     
-    /* 선택창(Selectbox) 드롭다운 메뉴 스타일 */
+    /* 선택창 드롭다운 메뉴 스타일 */
     ul[data-baseweb="menu"], div[role="listbox"] {
         background-color: #ffffff !important;
     }
@@ -49,16 +58,16 @@ st.markdown("""
         color: #000000 !important; 
     }
 
-    /* 5. 내부 요소 스타일 정리 */
+    /* 6. 내부 요소 테두리 제거 */
     div[data-baseweb="base-input"], 
     div[data-baseweb="select"] > div {
         border: none !important;
-        background-color: transparent !important; /* 상위에서 색을 칠했으므로 내부는 투명 */
+        background-color: transparent !important;
     }
 
-    /* 6. 기록 저장 버튼 */
+    /* 7. 기록 저장 버튼 디자인 */
     div[data-testid="stFormSubmitButton"] > button {
-        background-color: #0d1117 !important; /* 여기도 검은색으로 칠함 */
+        background-color: #0d1117 !important;
         color: #ffffff !important;
         border: 2px solid #ffffff !important;
         font-weight: bold !important;
@@ -66,9 +75,9 @@ st.markdown("""
         height: 3.5em !important;
     }
     
-    /* 7. 체온 입력기 스타일 */
+    /* 8. 체온 입력기 스타일 (통합 테두리) */
     div[data-testid="stNumberInput"] div[data-baseweb="input"] {
-        background-color: #0d1117 !important; /* 검은색 강제 */
+        background-color: #0d1117 !important;
         border: 2px solid #ffffff !important;
         padding-right: 0 !important;
     }
@@ -78,30 +87,25 @@ st.markdown("""
     }
     div[data-testid="stNumberInputStepDown"], 
     div[data-testid="stNumberInputStepUp"] {
-        background-color: #0d1117 !important; /* 버튼도 검은색 */
+        background-color: #0d1117 !important;
         border-left: 1px solid rgba(255,255,255,0.3) !important;
         color: #ffffff !important;
     }
 
-    /* 8. 상세 기록 표 스타일 */
+    /* 9. 상세 기록 표 스타일 */
     [data-testid="stDataFrame"], [data-testid="stTable"], .stDataFrame {
         border: 1px solid #ffffff !important;
-        background-color: #0d1117 !important; /* 표 배경도 검은색으로 */
+        background-color: #0d1117 !important;
     }
     [data-testid="stTable"] td, [data-testid="stTable"] th {
         color: #ffffff !important;
         border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
         background-color: #0d1117 !important;
     }
-    
-    /* 9. 라벨 텍스트 */
-    label, p, span, [data-testid="stWidgetLabel"] p {
-        color: #ffffff !important;
-        font-weight: bold !important;
-    }
 
-    /* 10. 커서 설정 (검색창 커서 숨김 유지) */
+    /* 10. 커서 숨김 (검색창) */
     div[data-baseweb="select"] input { opacity: 0 !important; width: 1px !important; }
+    * { -webkit-tap-highlight-color: transparent !important; }
     
     </style>
     """, unsafe_allow_html=True)
@@ -128,6 +132,7 @@ with st.expander("📝 새로운 건강 기록 입력", expanded=True):
         with c1: name = st.selectbox("아이 이름", ["아율", "아인", "혁"])
         with c2: d = st.date_input("측정 날짜", now.date())
         
+        # 라벨 텍스트도 CSS로 흰색 강제 적용됨
         st.markdown(f"🕒 **측정 시간** (KST: `{now.strftime('%H:%M')}`)")
         t1, t2, t3 = st.columns(3)
         with t1: ampm = st.selectbox("오전/오후", ["오전", "오후"], index=(0 if now.hour < 12 else 1))
