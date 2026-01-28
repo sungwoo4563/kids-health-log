@@ -1,23 +1,24 @@
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import datetime
+import os
 
 # 1. 페이지 설정
 st.set_page_config(page_title="아율·아인·혁 건강기록", page_icon="🌡️")
-st.title("🌡️ 우리 아이 건강 관리")
+st.title("🌡️ 우리 아이 건강 관리 (로컬 저장 모드)")
 
-# 2. 구글 시트 연결
-# 설정값은 Streamlit Secrets에서 자동으로 읽어오도록 가장 표준적인 방식을 사용합니다.
-conn = st.connection("gsheets", type=GSheetsConnection)
+# 2. 파일 경로 설정 (앱 폴더 안에 저장)
+DATA_FILE = "health_data.csv"
 
-# 3. 데이터 불러오기 (캐시 0으로 설정하여 실시간 데이터 보장)
-try:
-    df = conn.read(ttl=0)
-    if df is None or df.empty:
-        df = pd.DataFrame(columns=["일시", "이름", "체온", "약 종류", "용량", "특이사항"])
-except Exception:
-    df = pd.DataFrame(columns=["일시", "이름", "체온", "약 종류", "용량", "특이사항"])
+# 3. 데이터 불러오기 함수
+def load_data():
+    if os.path.exists(DATA_FILE):
+        return pd.read_csv(DATA_FILE)
+    else:
+        # 파일이 없으면 제목줄만 있는 데이터프레임 생성
+        return pd.DataFrame(columns=["일시", "이름", "체온", "약 종류", "용량", "특이사항"])
+
+df = load_data()
 
 # 4. 입력 폼
 with st.form("health_form", clear_on_submit=True):
@@ -37,9 +38,9 @@ with st.form("health_form", clear_on_submit=True):
         med_volume = st.text_input("용량 (예: 5ml, 1포)", placeholder="용량을 입력하세요")
 
     note = st.text_area("특이사항", placeholder="증상이나 메모를 남겨주세요")
-    submit = st.form_submit_button("💾 기록 저장 및 공유")
+    submit = st.form_submit_button("💾 기록 저장")
 
-# 5. 저장 로직
+# 5. 저장 로직 (로컬 파일에 쓰기)
 if submit:
     full_datetime = recorded_at.strftime('%Y-%m-%d %H:%M')
     new_row = {
@@ -47,29 +48,20 @@ if submit:
         "약 종류": med_type, "용량": med_volume, "특이사항": note
     }
     
-    try:
-        # 새로운 행 생성 후 기존 데이터와 합치기
-        new_data = pd.DataFrame([new_row])
-        updated_df = pd.concat([df, new_data], ignore_index=True)
-        
-        # 구글 시트 업데이트 시도
-        conn.update(data=updated_df)
-        
-        st.success(f"✅ {name}의 기록이 저장되었습니다!")
-        st.rerun()
-    except Exception as e:
-        # 에러 발생 시 명확한 원인 파악을 위해 에러 내용 출력
-        st.error(f"❌ 저장 실패: {e}")
-        st.info("구글 시트 '공유' 설정에서 서비스 계정(streamlit-bot@...)이 [편집자]로 되어 있는지 다시 확인해주세요.")
+    # 데이터 추가
+    new_df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+    # CSV 파일로 저장
+    new_df.to_csv(DATA_FILE, index=False, encoding='utf-8-sig')
+    
+    st.success(f"✅ {name}의 기록이 로컬에 저장되었습니다!")
+    st.rerun()
 
 # 6. 최근 기록 표시
 st.divider()
 st.subheader("📋 최근 기록 (최신순)")
 if not df.empty:
-    if "일시" in df.columns:
-        display_df = df.sort_values(by="일시", ascending=False)
-    else:
-        display_df = df
+    # 최신순 정렬
+    display_df = df.sort_values(by="일시", ascending=False)
     st.dataframe(display_df, use_container_width=True, hide_index=True)
 else:
     st.info("아직 기록이 없습니다.")
