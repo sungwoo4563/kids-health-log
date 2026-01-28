@@ -18,7 +18,7 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* 2. 그래프 디자인 - 테두리 제거 */
+    /* 2. 그래프 디자인 */
     [data-testid="stPlotlyChart"] {
         border: none !important;
         background-color: #161b22 !important;
@@ -97,7 +97,7 @@ st.markdown("""
         background-color: #0d1117 !important;
     }
     
-    /* [핵심 수정] 표 위의 툴바(검색, 다운로드 등) 숨기기 */
+    /* 표 위의 툴바(검색, 다운로드 등) 숨기기 유지 */
     [data-testid="stElementToolbar"] {
         display: none !important;
     }
@@ -208,7 +208,10 @@ for i, c_name in enumerate(child_names):
             colors = ['#4ade80' if t <= 37.5 else '#fbbf24' if t < d_limit else '#f87171' for t in f_df['체온']]
             
             fig = go.Figure()
-            # [핵심 수정] 배경 색상 띠(hrect) 코드 제거 -> 완전한 블랙 배경
+            # [복구] 배경 색상 띠(hrect) 다시 추가
+            fig.add_hrect(y0=34, y1=37.5, fillcolor="#28a745", opacity=0.15, line_width=0) # 정상(초록)
+            fig.add_hrect(y0=37.5, y1=d_limit, fillcolor="#fd7e14", opacity=0.15, line_width=0) # 미열(주황)
+            fig.add_hrect(y0=d_limit, y1=42, fillcolor="#dc3545", opacity=0.15, line_width=0) # 고열(빨강)
             
             fig.add_trace(go.Scatter(x=f_df['축'], y=f_df['체온'], mode='lines+markers+text', line=dict(color='white', width=2), marker=dict(color=colors, size=10, line=dict(color='white', width=1)), text=f_df['체온'], textposition="top center", textfont=dict(color="white", size=11)))
             
@@ -238,7 +241,6 @@ st.subheader("📋 상세 기록")
 edit_mode = st.toggle("🗑️ 기록 삭제/수정 모드 (클릭하여 활성화)", value=False)
 
 def color_rows(row):
-    # 배경 제거 & 글자 색상(color)으로 구분
     styles = {
         "아율": "color: #ff99cc; font-weight: bold;", # 🌸 핑크 텍스트
         "아인": "color: #a3e635; font-weight: bold;", # 🌿 라임 텍스트
