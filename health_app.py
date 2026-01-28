@@ -4,7 +4,7 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 디자인 (테두리 중복 제거 & 커서 숨김)
+# 1. 페이지 설정 및 디자인 졸업 작품 (버튼 투명화 + 체온계 통합 테두리)
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
@@ -16,12 +16,10 @@ st.markdown("""
     }
 
     /* -----------------------------------------------------------
-       [테두리 단일화 솔루션]
-       가장 바깥쪽 컨테이너(Wrapper)에만 테두리를 주고,
-       내부의 실제 입력 요소(input/button)들의 테두리는 싹 지웁니다.
+       [테두리 단일화 & 배경 제거 솔루션]
     ----------------------------------------------------------- */
     
-    /* 1. 입력창 '껍데기'에만 흰색 테두리 부여 */
+    /* 입력창 '껍데기'에만 흰색 테두리 부여 */
     div[data-baseweb="select"], 
     div[data-baseweb="input"], 
     div[data-baseweb="textarea"] {
@@ -31,7 +29,16 @@ st.markdown("""
         box-shadow: none !important;
     }
 
-    /* 2. 내부 알맹이(실제 input 태그 등)의 테두리와 배경 제거 -> 중복 테두리 해결 */
+    /* [핵심] 체온 기록(숫자 입력기) 내부의 중복 테두리 제거 */
+    /* +/- 버튼의 테두리를 없애서 전체가 하나의 박스처럼 보이게 함 */
+    div[data-testid="stNumberInputStepDown"], 
+    div[data-testid="stNumberInputStepUp"] {
+        border: none !important;
+        background-color: transparent !important;
+        color: #ffffff !important;
+    }
+    
+    /* 내부 알맹이(실제 input) 테두리 제거 */
     div[data-baseweb="base-input"], 
     input, textarea, select, 
     div[data-baseweb="select"] > div {
@@ -41,36 +48,45 @@ st.markdown("""
     }
 
     /* -----------------------------------------------------------
-       [커서 박멸 솔루션]
+       [기록 저장 버튼 디자인 변경]
+       녹색 배경을 제거하고, 입력창과 똑같은 '투명 배경 + 흰색 테두리'로 변경
     ----------------------------------------------------------- */
+    .stButton > button {
+        background-color: transparent !important; /* 배경 투명 */
+        color: #ffffff !important;
+        border: 1px solid #ffffff !important; /* 흰색 테두리 */
+        font-weight: bold !important;
+        border-radius: 8px !important;
+        height: 3.5em !important;
+        width: 100% !important;
+        text-shadow: none !important;
+        transition: all 0.2s; /* 부드러운 효과 */
+    }
     
-    /* 1. 모든 텍스트 입력의 커서 색상을 투명하게 */
-    input, textarea {
-        caret-color: transparent !important;
+    /* 버튼에 마우스 올리거나 눌렀을 때 살짝 표시 (선택사항) */
+    .stButton > button:active, .stButton > button:hover {
+        background-color: rgba(255, 255, 255, 0.1) !important;
+        border-color: #4ade80 !important; /* 누르면 살짝 연두색 테두리 */
+        color: #4ade80 !important;
     }
 
-    /* 2. 선택창(Selectbox) 내부의 '검색용 input'을 아예 숨김 처리 (커서 원천 차단) 
-       주의: 이렇게 하면 키보드 검색은 안 되지만, 선택은 버튼처럼 잘 됩니다. */
-    div[data-baseweb="select"] input {
-        opacity: 0 !important; 
-        width: 1px !important;
-    }
-
-    /* 3. 모바일 터치 하이라이트 제거 */
+    /* -----------------------------------------------------------
+       [커서 박멸 솔루션 (유지)]
+    ----------------------------------------------------------- */
+    input, textarea { caret-color: transparent !important; }
+    div[data-baseweb="select"] input { opacity: 0 !important; width: 1px !important; }
     * { -webkit-tap-highlight-color: transparent !important; }
 
     /* -----------------------------------------------------------
        [기타 가독성 디자인]
     ----------------------------------------------------------- */
-
-    /* 텍스트 색상 강제 흰색 (아이폰 등에서 파란색/검은색 방지) */
     input, textarea, div[data-baseweb="select"] span {
         color: #ffffff !important;
         -webkit-text-fill-color: #ffffff !important;
         font-weight: 500 !important;
     }
 
-    /* 상세 기록 표 디자인 (배경 제거 + 단일 테두리) */
+    /* 상세 기록 표 디자인 */
     [data-testid="stDataFrame"], [data-testid="stTable"], .stDataFrame {
         border: 1px solid #ffffff !important;
         background-color: transparent !important;
@@ -81,29 +97,10 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* 저장 버튼 디자인 */
-    .stButton > button {
-        background-color: #238636 !important;
-        color: #ffffff !important;
-        border: 1px solid #ffffff !important;
-        font-weight: bold !important;
-        border-radius: 8px !important;
-        height: 3.5em !important;
-        width: 100% !important;
-    }
-
     /* 라벨 텍스트 */
     label, p, span, [data-testid="stWidgetLabel"] p {
         color: #ffffff !important;
         font-weight: bold !important;
-    }
-    
-    /* 숫자 입력기(+/-) 버튼 테두리 제거 후 배경만 살짝 */
-    div[data-testid="stNumberInputStepDown"], 
-    div[data-testid="stNumberInputStepUp"] {
-        border: 1px solid rgba(255,255,255,0.3) !important;
-        background-color: rgba(255,255,255,0.05) !important;
-        margin: 2px !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -207,7 +204,6 @@ if not st.session_state.df.empty:
         with tab:
             display_df = st.session_state.df if n_filter is None else st.session_state.df[st.session_state.df['이름'] == n_filter]
             if not display_df.empty:
-                # 소수점 포맷팅
                 show_df = display_df.copy().iloc[::-1]
                 show_df['체온'] = show_df['체온'].apply(lambda x: f"{float(x):.1f}")
                 st.table(show_df)
