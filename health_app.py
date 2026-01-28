@@ -4,7 +4,7 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 디자인 (그래프 중앙 정렬 + 모든 디자인 통합)
+# 1. 페이지 설정 및 디자인 (그래프 정렬 및 여백 최적화)
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
@@ -15,24 +15,29 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* 2. [핵심 수정] 그래프(Plotly) 테두리 및 중앙 정렬 
-       - display: flex와 justify-content: center로 내부 그래프를 강제 중앙 정렬
+    /* 2. [핵심 수정] 그래프(Plotly) 액자 디자인 & 정렬 교정
+       - padding을 10px에서 15px로 늘려 내부 여백 확보
+       - display flex로 완벽한 중앙 정렬 유도
     */
     [data-testid="stPlotlyChart"] {
         border: 2px solid #ffffff !important;
         border-radius: 15px !important;
-        padding: 5px !important; /* 패딩을 약간 줄여서 꽉 차게 */
+        padding: 15px !important; /* 내부 여백을 넉넉하게 줘서 답답함 해소 */
         background-color: #0d1117 !important;
-        margin-bottom: 10px !important;
-        display: flex !important;       /* 플렉스 박스 적용 */
-        justify-content: center !important; /* 가로 중앙 정렬 */
-        align-items: center !important;     /* 세로 중앙 정렬 */
-    }
-    /* 그래프 내부 컨테이너도 꽉 차게 */
-    [data-testid="stPlotlyChart"] > div {
-        width: 100% !important;
+        margin-bottom: 15px !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important; /* 살짝 그림자 줘서 입체감 */
         display: flex !important;
         justify-content: center !important;
+        align-items: center !important;
+    }
+    
+    /* 그래프 캔버스 자체도 꽉 차게 */
+    [data-testid="stPlotlyChart"] > div {
+        width: 100% !important;
+        height: 100% !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
     }
 
     /* 3. 선택창 텍스트 가독성 (흰색 강제) */
@@ -78,6 +83,7 @@ st.markdown("""
         border: 2px solid #ffffff !important;
         font-weight: bold !important;
         border-radius: 8px !important;
+        height: 3.5em !important;
     }
     
     /* 8. 체온 입력기 통합 테두리 */
@@ -208,15 +214,16 @@ for i, c_name in enumerate(child_names):
             fig.add_hrect(y0=d_limit, y1=42, fillcolor="#dc3545", opacity=0.15, line_width=0)
             fig.add_trace(go.Scatter(x=f_df['축'], y=f_df['체온'], mode='lines+markers+text', line=dict(color='white', width=2), marker=dict(color=colors, size=10, line=dict(color='white', width=1)), text=f_df['체온'], textposition="top center", textfont=dict(color="white", size=11)))
             
-            # [수정] 좌우 여백(l, r)을 15로 똑같이 맞춰서 물리적 중앙 정렬
+            # [수정] 그래프 여백 및 정렬 대폭 수정
             fig.update_layout(
                 title=dict(text=f"<b>{c_name}</b>", font=dict(size=18, color="white"), x=0.5, xanchor='center'),
-                height=200, 
-                margin=dict(l=15, r=15, t=40, b=10), # 좌우 여백 균일화
+                height=220, # 높이를 살짝 키워 여유 확보
+                # margin을 조절하여 그래프가 박스 정중앙에 '예쁘게' 위치하도록 유도
+                margin=dict(l=25, r=25, t=50, b=25), 
                 paper_bgcolor='rgba(0,0,0,0)', 
                 plot_bgcolor='rgba(0,0,0,0)', 
                 showlegend=False, 
-                xaxis=dict(showgrid=False, color='white', tickfont=dict(size=9)), 
+                xaxis=dict(showgrid=False, color='white', tickfont=dict(size=10)), # 폰트 사이즈 9->10
                 yaxis=dict(range=[34, 42], visible=False)
             )
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}, key=f"chart_{c_name}")
