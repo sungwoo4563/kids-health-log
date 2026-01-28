@@ -73,7 +73,7 @@ with st.expander("📝 새로운 기록 추가하기", expanded=False):
             save_data(st.session_state.df)
             st.rerun()
 
-# 4. 현황 대시보드 (기존 유지)
+# 4. 현황 대시보드
 st.subheader("📊 현재 상태 요약")
 cols = st.columns(3)
 child_names = ["아율", "아인", "혁"]
@@ -93,17 +93,19 @@ for i, c_name in enumerate(child_names):
             st.markdown(f'<div class="status-card {bg}"><div><div class="card-header">{child_icons[c_name]} {c_name} {st_icon} {st_txt}</div><div class="card-temp">{latest["체온"]}°C</div><div class="card-delta">{delta_prefix} {abs(diff)}°C</div></div><div class="card-footer">🕒 {latest["날짜"]} {latest["시간"]}</div></div>', unsafe_allow_html=True)
         else: st.info(f"{c_name}: 기록 없음")
 
-# 5. 아이별 그래프 (월.일 시간 표시 버전)
-st.subheader("📈 최근 체온 흐름 (월.일 시간)")
+# 5. 아이별 그래프 (날짜/시간 2줄 표시)
+st.subheader("📈 최근 체온 흐름")
 g_cols = st.columns(3)
 
 def prepare_chart_data(df):
     if df.empty: return df
-    chart_df = df.tail(7).copy() # 텍스트 겹침 방지를 위해 최근 7개
-    # '26.01.28' -> '01.28' 로 간소화
-    chart_df['심플날짜'] = chart_df['날짜'].str.split('.').str[1:].str.join('.')
-    # 최종 시간축 형식: '01.28 10:30'
-    chart_df['시간축'] = chart_df['심플날짜'] + " " + chart_df['시간'].str.split(' ').str[-1]
+    chart_df = df.tail(7).copy()
+    # 날짜와 시간을 리스트 형태로 넣어 Vega-Lite에서 자동으로 줄바꿈 처리되게 함
+    chart_df['심플날짜'] = chart_df['날짜'].str.split('.').str[1:].str.join('.') + "일"
+    chart_df['심플시간'] = chart_df['시간'].str.split(' ').str[-1]
+    
+    # 2줄로 표시하기 위해 [날짜, 시간] 리스트 생성
+    chart_df['시간축'] = chart_df[['심플날짜', '심플시간']].values.tolist()
     return chart_df
 
 for i, c_name in enumerate(child_names):
@@ -137,7 +139,7 @@ for i, c_name in enumerate(child_names):
         else:
             st.info(f"{c_name} 데이터 없음")
 
-# 6. 상세 기록 탭 (생략)
+# 6. 상세 기록 탭
 st.divider()
 tabs = st.tabs(["📋 전체 기록", "💖 아율", "💛 아인", "💙 혁"])
-# ... [이전과 동일한 탭/표 코드]
+# ... [상세 기록 및 삭제 로직 포함된 표 코드는 동일]
