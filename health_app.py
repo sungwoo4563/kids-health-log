@@ -4,7 +4,7 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 디자인 (텍스트 가독성 + 커서 숨김 + 섹션 구분)
+# 1. 페이지 설정 및 디자인 (그래프 테두리 및 이름표 추가)
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
@@ -15,7 +15,16 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* 2. 선택창(Selectbox) 텍스트 가독성 (흰색 강제) */
+    /* 2. [핵심 추가] 그래프(Plotly) 테두리 액자 디자인 */
+    [data-testid="stPlotlyChart"] {
+        border: 2px solid #ffffff !important;
+        border-radius: 15px !important;
+        padding: 10px !important;
+        background-color: #0d1117 !important;
+        margin-bottom: 10px !important; /* 모바일에서 간격 확보 */
+    }
+
+    /* 3. 선택창 텍스트 가독성 (흰색 강제) */
     div[data-baseweb="select"] span, 
     div[data-baseweb="select"] div {
         color: #ffffff !important;
@@ -23,21 +32,11 @@ st.markdown("""
         font-weight: 700 !important;
         opacity: 1 !important;
     }
-    div[data-baseweb="select"] svg {
-        fill: #ffffff !important;
-        color: #ffffff !important;
-    }
+    div[data-baseweb="select"] svg { fill: #ffffff !important; }
 
-    /* 3. [커서 박멸] 검색용 input 숨기기 */
-    div[data-baseweb="select"] input {
-        opacity: 0 !important;
-        width: 0px !important;
-        height: 0px !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-
-    /* 4. [입력창] 커서 숨기기 트릭 (투명 글자 + 흰색 그림자) */
+    /* 4. 커서 박멸 (검색창 숨김 + 입력창 투명화 트릭) */
+    div[data-baseweb="select"] input { opacity: 0 !important; width: 0px !important; }
+    
     input[type="text"], textarea {
         color: transparent !important;
         text-shadow: 0 0 0 #ffffff !important;
@@ -45,7 +44,7 @@ st.markdown("""
         cursor: pointer !important;
     }
 
-    /* 5. 입력창 컨테이너 디자인 (검은 배경 + 흰색 테두리) */
+    /* 5. 입력창 디자인 (검은 배경 + 흰색 테두리) */
     div[data-baseweb="select"], 
     div[data-baseweb="input"], 
     div[data-baseweb="textarea"] {
@@ -61,18 +60,16 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* 7. 기록 저장 버튼 디자인 */
+    /* 7. 기록 저장 버튼 */
     div[data-testid="stFormSubmitButton"] > button {
         background-color: #0d1117 !important;
         color: #ffffff !important;
         border: 2px solid #ffffff !important;
         font-weight: bold !important;
         border-radius: 8px !important;
-        height: 3.5em !important;
-        text-shadow: none !important;
     }
     
-    /* 8. 체온 입력기(Number Input) 통합 테두리 */
+    /* 8. 체온 입력기 통합 테두리 */
     div[data-testid="stNumberInput"] div[data-baseweb="input"] {
         background-color: #0d1117 !important;
         border: 2px solid #ffffff !important;
@@ -84,7 +81,6 @@ st.markdown("""
         text-shadow: 0 0 0 #ffffff !important;
         color: transparent !important;
     }
-    /* +/- 버튼 */
     div[data-testid="stNumberInputStepDown"], 
     div[data-testid="stNumberInputStepUp"] {
         background-color: #0d1117 !important;
@@ -92,7 +88,7 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* 9. 상세 기록 표 스타일 */
+    /* 9. 표 및 라벨 스타일 */
     [data-testid="stDataFrame"], [data-testid="stTable"], .stDataFrame {
         border: 1px solid #ffffff !important;
         background-color: #0d1117 !important;
@@ -102,20 +98,13 @@ st.markdown("""
         border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
         background-color: #0d1117 !important;
     }
-    
-    /* 10. 라벨(제목) 및 구분선(Divider) 흰색 고정 */
     label, p, span, [data-testid="stWidgetLabel"] p, h1, h2, h3 {
         color: #ffffff !important;
         font-weight: 700 !important;
     }
-    hr {
-        border-color: #ffffff !important; /* 구분선도 흰색으로 선명하게 */
-        opacity: 0.3 !important;
-    }
+    hr { border-color: #ffffff !important; opacity: 0.3 !important; }
 
-    /* 모바일 터치 하이라이트 제거 */
     * { -webkit-tap-highlight-color: transparent !important; }
-    
     </style>
     """, unsafe_allow_html=True)
 
@@ -156,14 +145,14 @@ with st.expander("📝 새로운 건강 기록 입력", expanded=True):
         with c5: vol = st.text_input("💉 용량", placeholder="예: 5ml")
         note = st.text_area("🗒️ 특이사항")
 
-        # 교차 복용 체크
-        child_history = st.session_state.df[st.session_state.df['이름'] == name]
-        if not child_history.empty and med in ["맥시부펜", "세토펜"]:
-            med_history = child_history[child_history['약 종류'] != "선택 안 함"]
-            if not med_history.empty:
-                last_med = med_history.iloc[-1]['약 종류']
-                if last_med == med:
-                    st.warning(f"⚠️ 주의: {name}가 마지막으로 복용한 약도 **{last_med}**입니다!")
+        if med in ["맥시부펜", "세토펜"]:
+            child_history = st.session_state.df[st.session_state.df['이름'] == name]
+            if not child_history.empty:
+                med_history = child_history[child_history['약 종류'] != "선택 안 함"]
+                if not med_history.empty:
+                    last_med = med_history.iloc[-1]['약 종류']
+                    if last_med == med:
+                        st.warning(f"⚠️ 주의: {name}가 마지막으로 복용한 약도 **{last_med}**입니다!")
 
         if st.form_submit_button("💾 기록 저장"):
             f_date = d.strftime("%y.%m.%d")
@@ -191,7 +180,7 @@ for i, c_name in enumerate(child_names):
         else: st.info(f"{c_name}: 기록 없음")
 
 # 5. 아이별 그래프 (Plotly)
-st.divider() # [추가된 부분] 현황과 그래프 사이를 나누는 선
+st.divider()
 st.subheader("📈 최근 체온 흐름")
 g_cols = st.columns(3)
 for i, c_name in enumerate(child_names):
@@ -201,16 +190,29 @@ for i, c_name in enumerate(child_names):
             f_df['축'] = f_df['날짜'].str[3:] + "<br>" + f_df['시간'].str.split(' ').str[-1]
             d_limit = 38.0 if c_name == "혁" else 39.0
             colors = ['#4ade80' if t <= 37.5 else '#fbbf24' if t < d_limit else '#f87171' for t in f_df['체온']]
+            
+            # [수정] 그래프에 이름표 및 배경 설정 추가
             fig = go.Figure()
             fig.add_hrect(y0=34, y1=37.5, fillcolor="#28a745", opacity=0.15, line_width=0)
             fig.add_hrect(y0=37.5, y1=d_limit, fillcolor="#fd7e14", opacity=0.15, line_width=0)
             fig.add_hrect(y0=d_limit, y1=42, fillcolor="#dc3545", opacity=0.15, line_width=0)
             fig.add_trace(go.Scatter(x=f_df['축'], y=f_df['체온'], mode='lines+markers+text', line=dict(color='white', width=2), marker=dict(color=colors, size=10, line=dict(color='white', width=1)), text=f_df['체온'], textposition="top center", textfont=dict(color="white", size=11)))
-            fig.update_layout(height=180, margin=dict(l=5, r=5, t=25, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', showlegend=False, xaxis=dict(showgrid=False, color='white', tickfont=dict(size=9)), yaxis=dict(range=[34, 42], visible=False))
+            
+            # [이름표 추가] 그래프 상단 제목 설정
+            fig.update_layout(
+                title=dict(text=f"<b>{c_name}</b>", font=dict(size=18, color="white"), x=0.5, xanchor='center'),
+                height=200, 
+                margin=dict(l=10, r=10, t=40, b=10), # 제목 공간 확보
+                paper_bgcolor='rgba(0,0,0,0)', 
+                plot_bgcolor='rgba(0,0,0,0)', 
+                showlegend=False, 
+                xaxis=dict(showgrid=False, color='white', tickfont=dict(size=9)), 
+                yaxis=dict(range=[34, 42], visible=False)
+            )
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}, key=f"chart_{c_name}")
 
 # 6. 상세 기록 리스트
-st.divider() # 여기도 구분선 유지
+st.divider()
 st.subheader("📋 상세 기록")
 if not st.session_state.df.empty:
     tabs = st.tabs(["전체", "💖 아율", "💛 아인", "💙 혁"])
