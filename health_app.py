@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 # 1. 페이지 설정 및 디자인
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
-# 아이들 아이콘 정의 (전역 사용)
+# 아이들 아이콘 정의
 CHILD_ICONS = {"아율": "👧", "아인": "👧", "혁": "👶"}
 
 st.markdown("""
@@ -22,7 +22,7 @@ st.markdown("""
     [data-testid="stPlotlyChart"] {
         border: 2px solid #ffffff !important;
         border-radius: 15px !important;
-        padding: 10px !important;
+        padding: 15px !important;
         background-color: #0d1117 !important;
         margin-bottom: 15px !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
@@ -30,7 +30,6 @@ st.markdown("""
         justify-content: center !important;
         align-items: center !important;
     }
-    
     [data-testid="stPlotlyChart"] > div {
         width: 100% !important;
         height: 100% !important;
@@ -39,7 +38,7 @@ st.markdown("""
         align-items: center !important;
     }
 
-    /* 3. 선택창 텍스트 가독성 (흰색 강제) */
+    /* 3. 선택창 텍스트 가독성 */
     div[data-baseweb="select"] span, 
     div[data-baseweb="select"] div {
         color: #ffffff !important;
@@ -51,7 +50,6 @@ st.markdown("""
 
     /* 4. 커서 박멸 */
     div[data-baseweb="select"] input { opacity: 0 !important; width: 0px !important; }
-    
     input[type="text"], textarea {
         color: transparent !important;
         text-shadow: 0 0 0 #ffffff !important;
@@ -125,6 +123,11 @@ st.markdown("""
         font-weight: bold !important;
         font-size: 1rem !important;
     }
+    
+    /* 수정 모드 토글 스타일 */
+    div[data-testid="stCheckbox"] label span {
+        color: #fbbf24 !important; /* 노란색으로 강조 */
+    }
 
     * { -webkit-tap-highlight-color: transparent !important; }
     </style>
@@ -150,7 +153,6 @@ with st.expander("📝 새로운 건강 기록 입력", expanded=True):
     with st.form("health_form", clear_on_submit=True):
         c1, c2 = st.columns(2)
         with c1: 
-            # [수정] 선택창에 이모티콘 표시 (저장은 이름만)
             name = st.selectbox(
                 "아이 이름", 
                 ["아율", "아인", "혁"], 
@@ -203,7 +205,6 @@ for i, c_name in enumerate(child_names):
             latest = child_df.iloc[-1]; t = latest["체온"]
             d_limit = 38.0 if c_name == "혁" else 39.0
             bg = "#1e3a2a" if t <= 37.5 else "#4a3a1a" if t < d_limit else "#3e1a1a"
-            # [수정] 이모티콘 적용
             st.markdown(f'<div style="background-color:{bg}; padding:15px; border:1px solid #ffffff; border-radius:15px; color:white;"><div style="font-weight:bold;">{CHILD_ICONS[c_name]} {c_name}</div><div style="font-size:2rem; font-weight:800;">{t}°C</div><div style="font-size:0.8rem; opacity:0.8;">🕒 {latest["시간"]}</div></div>', unsafe_allow_html=True)
         else: st.info(f"{CHILD_ICONS[c_name]} {c_name}: 기록 없음")
 
@@ -226,7 +227,6 @@ for i, c_name in enumerate(child_names):
             
             fig.add_trace(go.Scatter(x=f_df['축'], y=f_df['체온'], mode='lines+markers+text', line=dict(color='white', width=2), marker=dict(color=colors, size=10, line=dict(color='white', width=1)), text=f_df['체온'], textposition="top center", textfont=dict(color="white", size=11)))
             
-            # [수정] 그래프 제목에 이모티콘 추가
             fig.update_layout(
                 title=dict(text=f"<b>{CHILD_ICONS[c_name]} {c_name}</b>", font=dict(size=18, color="white"), x=0.5, xanchor='center'),
                 height=250, 
@@ -246,17 +246,37 @@ for i, c_name in enumerate(child_names):
             )
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'scrollZoom': False}, key=f"chart_{c_name}")
 
-# 6. 상세 기록 리스트
+# 6. 상세 기록 리스트 (삭제 기능 복구)
 st.divider()
 st.subheader("📋 상세 기록")
+
+# [핵심] 수정/삭제 모드 토글 스위치
+edit_mode = st.toggle("🗑️ 기록 삭제/수정 모드 (클릭하여 활성화)", value=False)
+
 if not st.session_state.df.empty:
-    # [수정] 탭 이름에 이모티콘 적용
-    tabs = st.tabs(["전체", f"👧 아율", f"👧 아인", f"👶 혁"])
-    for i, tab in enumerate(tabs):
-        n_filter = [None, "아율", "아인", "혁"][i]
-        with tab:
-            display_df = st.session_state.df if n_filter is None else st.session_state.df[st.session_state.df['이름'] == n_filter]
-            if not display_df.empty:
-                show_df = display_df.copy().iloc[::-1]
-                show_df['체온'] = show_df['체온'].apply(lambda x: f"{float(x):.1f}")
-                st.table(show_df)
+    if edit_mode:
+        # 수정 모드: 전체 데이터를 편집 가능한 표로 보여줌
+        st.info("💡 행을 선택하고 Delete 키를 누르거나, 휴지통 아이콘을 눌러 삭제하세요.")
+        edited_df = st.data_editor(
+            st.session_state.df,
+            hide_index=True,
+            use_container_width=True,
+            num_rows="dynamic", # 행 추가/삭제 허용
+            key="data_editor"
+        )
+        # 데이터가 변경되었으면 저장
+        if not edited_df.equals(st.session_state.df):
+            st.session_state.df = edited_df
+            save_data(st.session_state.df)
+            st.rerun()
+    else:
+        # 보기 모드: 예쁜 디자인의 탭 뷰 (삭제 불가, 보기 전용)
+        tabs = st.tabs(["전체", f"👧 아율", f"👧 아인", f"👶 혁"])
+        for i, tab in enumerate(tabs):
+            n_filter = [None, "아율", "아인", "혁"][i]
+            with tab:
+                display_df = st.session_state.df if n_filter is None else st.session_state.df[st.session_state.df['이름'] == n_filter]
+                if not display_df.empty:
+                    show_df = display_df.copy().iloc[::-1]
+                    show_df['체온'] = show_df['체온'].apply(lambda x: f"{float(x):.1f}")
+                    st.table(show_df)
