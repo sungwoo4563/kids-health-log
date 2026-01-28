@@ -13,11 +13,8 @@ DATA_FILE = "health_data.csv"
 # 3. 데이터 불러오기 및 저장 함수
 def load_data():
     if os.path.exists(DATA_FILE):
-        df = pd.read_csv(DATA_FILE)
-        # 기존 데이터가 있다면 날짜 형식을 00.00.00으로 변환 시도
-        return df
+        return pd.read_csv(DATA_FILE)
     else:
-        # 날짜, 시간이 맨 앞으로 오고 특이사항이 맨 뒤로 가는 구조
         return pd.DataFrame(columns=["날짜", "시간", "이름", "체온", "약 종류", "용량", "특이사항"])
 
 def save_data(df):
@@ -27,7 +24,7 @@ def save_data(df):
 if 'df' not in st.session_state:
     st.session_state.df = load_data()
 
-# 4. 입력 폼
+# 4. 입력 폼 (들여쓰기 주의!)
 with st.expander("📝 새로운 기록 입력하기", expanded=True):
     with st.form("health_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
@@ -35,7 +32,6 @@ with st.expander("📝 새로운 기록 입력하기", expanded=True):
             name = st.selectbox("아이 선택", ["아율", "아인", "혁"])
         with col2:
             selected_date = st.date_input("날짜 선택", datetime.date.today())
-            # 요청하신 00.00.00 형식으로 통일
             formatted_date = selected_date.strftime("%y.%m.%d")
 
         st.write("🕒 복용 시간")
@@ -59,9 +55,11 @@ with st.expander("📝 새로운 기록 입력하기", expanded=True):
         with col5:
             med_volume = st.text_input("용량", placeholder="예: 5ml")
 
-    note = st.text_area("특이사항", placeholder="증상이나 메모를 남겨주세요")
-    submit = st.form_submit_button("💾 기록 저장")
+        # ⚠️ 특이사항과 버튼이 st.form 안에 잘 들어와 있어야 합니다.
+        note = st.text_area("특이사항", placeholder="증상이나 메모를 남겨주세요")
+        submit = st.form_submit_button("💾 기록 저장")
 
+# 5. 저장 로직 (폼 제출 시 실행)
 if submit:
     new_row = {
         "날짜": formatted_date, "시간": formatted_time, "이름": name,
@@ -72,11 +70,10 @@ if submit:
     st.success(f"✅ {name}의 기록이 저장되었습니다!")
     st.rerun()
 
-# 5. 기록 관리 및 아이별 탭 분리
+# 6. 기록 관리 및 아이별 탭 분리
 st.divider()
 st.subheader("📋 기록 확인 및 관리")
 
-# 체온 글자색 스타일 함수
 def color_temp_text(val):
     if val <= 37.5: color = '#28a745' # 초록
     elif 37.6 <= val <= 38.9: color = '#fd7e14' # 주황
@@ -102,11 +99,9 @@ if not st.session_state.df.empty:
                 csv = filtered_df.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
                 st.download_button(label=f"📥 {names[i] if names[i] else '전체'} 기록 내려받기", data=csv, file_name=f"건강기록_{names[i] if names[i] else '전체'}_{datetime.date.today()}.csv", key=f"dl_{i}")
 
-                # 표시용 데이터프레임 구성 (날짜, 시간이 맨 앞으로)
                 display_df = filtered_df.copy()
                 display_df.insert(0, '선택', False)
                 
-                # 컬럼 순서 고정 (선택, 날짜, 시간, 이름, 체온, 약 종류, 용량, 특이사항)
                 cols = ['선택', '날짜', '시간', '이름', '체온', '약 종류', '용량', '특이사항']
                 display_df = display_df[cols]
 
