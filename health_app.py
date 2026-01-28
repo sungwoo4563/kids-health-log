@@ -4,7 +4,7 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 디자인 (텍스트 가독성 최우선 + 커서 숨김)
+# 1. 페이지 설정 및 디자인 (텍스트 가독성 + 커서 숨김 + 섹션 구분)
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
@@ -15,27 +15,20 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* 2. [핵심 수정] 선택창(Selectbox) 텍스트 가독성 복구 
-       - "아율", "오전" 같은 선택된 값들이 어둡게 나오는 문제 해결
-       - 무조건 흰색(#ffffff)으로 강제합니다. 
-    */
+    /* 2. 선택창(Selectbox) 텍스트 가독성 (흰색 강제) */
     div[data-baseweb="select"] span, 
     div[data-baseweb="select"] div {
         color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important; /* 아이폰/맥 강제 적용 */
-        font-weight: 700 !important; /* 글자 굵게 */
+        -webkit-text-fill-color: #ffffff !important;
+        font-weight: 700 !important;
         opacity: 1 !important;
     }
-    
-    /* 선택창 내부의 아이콘(화살표)도 흰색으로 */
     div[data-baseweb="select"] svg {
         fill: #ffffff !important;
         color: #ffffff !important;
     }
 
-    /* 3. [커서 박멸] 검색용 input 숨기기 
-       - 선택창은 '입력'이 아니라 '선택'이므로, 검색 입력창 자체를 숨겨서 커서를 없앱니다.
-    */
+    /* 3. [커서 박멸] 검색용 input 숨기기 */
     div[data-baseweb="select"] input {
         opacity: 0 !important;
         width: 0px !important;
@@ -44,9 +37,7 @@ st.markdown("""
         margin: 0 !important;
     }
 
-    /* 4. [입력창(Text Input, Number Input)] 커서 숨기기 트릭 유지
-       - 여긴 타이핑이 필요하므로 '투명 글자 + 흰색 그림자' 방식 사용
-    */
+    /* 4. [입력창] 커서 숨기기 트릭 (투명 글자 + 흰색 그림자) */
     input[type="text"], textarea {
         color: transparent !important;
         text-shadow: 0 0 0 #ffffff !important;
@@ -58,8 +49,8 @@ st.markdown("""
     div[data-baseweb="select"], 
     div[data-baseweb="input"], 
     div[data-baseweb="textarea"] {
-        background-color: #0d1117 !important; /* 배경 검은색 */
-        border: 2px solid #ffffff !important;  /* 테두리 흰색 */
+        background-color: #0d1117 !important;
+        border: 2px solid #ffffff !important;
         border-radius: 8px !important;
     }
 
@@ -90,7 +81,7 @@ st.markdown("""
     div[data-testid="stNumberInput"] input {
         border: none !important;
         background-color: #0d1117 !important;
-        text-shadow: 0 0 0 #ffffff !important; /* 숫자도 흰색 그림자로 */
+        text-shadow: 0 0 0 #ffffff !important;
         color: transparent !important;
     }
     /* +/- 버튼 */
@@ -112,10 +103,14 @@ st.markdown("""
         background-color: #0d1117 !important;
     }
     
-    /* 10. 라벨(제목) 텍스트 흰색 고정 */
+    /* 10. 라벨(제목) 및 구분선(Divider) 흰색 고정 */
     label, p, span, [data-testid="stWidgetLabel"] p, h1, h2, h3 {
         color: #ffffff !important;
         font-weight: 700 !important;
+    }
+    hr {
+        border-color: #ffffff !important; /* 구분선도 흰색으로 선명하게 */
+        opacity: 0.3 !important;
     }
 
     /* 모바일 터치 하이라이트 제거 */
@@ -196,6 +191,7 @@ for i, c_name in enumerate(child_names):
         else: st.info(f"{c_name}: 기록 없음")
 
 # 5. 아이별 그래프 (Plotly)
+st.divider() # [추가된 부분] 현황과 그래프 사이를 나누는 선
 st.subheader("📈 최근 체온 흐름")
 g_cols = st.columns(3)
 for i, c_name in enumerate(child_names):
@@ -214,7 +210,7 @@ for i, c_name in enumerate(child_names):
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}, key=f"chart_{c_name}")
 
 # 6. 상세 기록 리스트
-st.divider()
+st.divider() # 여기도 구분선 유지
 st.subheader("📋 상세 기록")
 if not st.session_state.df.empty:
     tabs = st.tabs(["전체", "💖 아율", "💛 아인", "💙 혁"])
