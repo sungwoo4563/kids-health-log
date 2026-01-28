@@ -62,7 +62,7 @@ with st.expander("📝 새로운 기록 추가하기", expanded=False):
         f_time = f"{ampm} {hour}:{minute}"
 
         c4, c5, c6 = st.columns(3)
-        with c4: temp = st.number_input("체온 (℃)", 34.0, 42.0, 36.5, 0.1)
+        with c4: temp = st.number_input("체온 (℃)", 30.0, 42.0, 36.5, 0.1)
         with c5: med = st.selectbox("약 종류", ["선택 안 함", "맥시부펜", "세토펜", "아침약", "점심약", "저녁약", "기타"])
         with c6: vol = st.text_input("용량", placeholder="예: 5ml")
         
@@ -93,8 +93,8 @@ for i, c_name in enumerate(child_names):
             st.markdown(f'<div class="status-card {bg}"><div><div class="card-header">{child_icons[c_name]} {c_name} {st_icon} {st_txt}</div><div class="card-temp">{latest['체온']}°C</div><div class="card-delta">{delta_prefix} {abs(diff)}°C</div></div><div class="card-footer">🕒 {latest['날짜']} {latest['시간']}</div></div>', unsafe_allow_html=True)
         else: st.info(f"{c_name}: 기록 없음")
 
-# 5. 아이별 그래프 (가로축 텍스트 제거 및 세로축 범위 고정)
-st.subheader("📈 최근 체온 변화 흐름")
+# 5. 아이별 그래프 (범위 고정 및 포인트 강조)
+st.subheader("📈 최근 체온 변화 (기록 포인트 강조)")
 g_cols = st.columns(3)
 
 for i, c_name in enumerate(child_names):
@@ -102,23 +102,23 @@ for i, c_name in enumerate(child_names):
         f_df = st.session_state.df[st.session_state.df['이름'] == c_name]
         if not f_df.empty:
             st.markdown(f"**{child_icons[c_name]} {c_name} 추세**")
-            # 그래프 데이터 가공 (시간축 텍스트를 제거하기 위해 인덱스로 표시)
-            chart_data = f_df.tail(10).copy() # 최근 10개만
-            chart_data = chart_data.reset_index()
+            chart_data = f_df.tail(12).copy() 
             
-            # y_axis_range를 사용하여 체온 범위를 20~45로 고정
-            st.line_chart(
-                chart_data, 
-                y='체온', 
-                color="#ff4b4b", 
-                height=250,
-                use_container_width=True
-            )
-            st.caption("💡 오른쪽 끝이 가장 최신 기록입니다.")
+            # st.line_chart에서 세로축 범위를 y_axis_range로 조절 (최신 Streamlit 기능)
+            # 포인트 강조를 위해 인덱스를 활용한 선 그래프
+            st.vega_lite_chart(chart_data, {
+                'height': 250,
+                'mark': {'type': 'line', 'point': True, 'color': '#ff4b4b'},
+                'encoding': {
+                    'x': {'field': 'index', 'type': 'quantitative', 'axis': {'title': None, 'labels': False, 'grid': False}},
+                    'y': {'field': '체온', 'type': 'quantitative', 'scale': {'domain': [30, 42]}, 'axis': {'title': '℃'}},
+                },
+            }, use_container_width=True)
+            st.caption("💡 점(Point)이 찍힌 부분이 기록된 시점입니다.")
         else:
             st.info(f"{c_name} 데이터 없음")
 
 # 6. 상세 기록 탭
 st.divider()
 tabs = st.tabs(["📋 전체 기록", "💖 아율", "💛 아인", "💙 혁"])
-# ... (이후 삭제 로직 포함된 표 코드는 동일)
+# ... (상세 기록 및 삭제 로직 생략 - 이전과 동일)
