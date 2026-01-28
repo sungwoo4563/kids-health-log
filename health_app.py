@@ -18,7 +18,7 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* 2. 그래프 디자인 - 테두리 제거 및 플랫하게 */
+    /* 2. 그래프 디자인 - 테두리 제거 */
     [data-testid="stPlotlyChart"] {
         border: none !important;
         background-color: #161b22 !important;
@@ -28,7 +28,7 @@ st.markdown("""
         box-shadow: none !important;
     }
 
-    /* 3. 선택창 및 입력창 디자인 - 어두운 테두리 */
+    /* 3. 선택창 및 입력창 디자인 */
     div[data-baseweb="select"] span, 
     div[data-baseweb="select"] div {
         color: #ffffff !important;
@@ -40,7 +40,7 @@ st.markdown("""
     div[data-baseweb="input"], 
     div[data-baseweb="textarea"] {
         background-color: #161b22 !important;
-        border: 1px solid #30363d !important; /* 흰색 대신 어두운 회색 */
+        border: 1px solid #30363d !important;
         border-radius: 8px !important;
     }
     
@@ -82,19 +82,24 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* 6. [핵심 수정] 표(DataFrame) 스타일 - 흰색 라인 제거 */
+    /* 6. 표(DataFrame) 스타일 */
     div[data-testid="stDataFrame"] div[role="columnheader"] {
         background-color: #161b22 !important;
-        color: #e6edf3 !important; /* 헤더는 약간 밝은 회색 */
+        color: #e6edf3 !important;
         font-weight: bold !important;
-        border-bottom: 1px solid #30363d !important; /* 흰색 선 제거 -> 어두운 선 */
+        border-bottom: 1px solid #30363d !important;
     }
     div[data-testid="stDataFrame"] div[role="gridcell"] {
-        border-bottom: 1px solid #21262d !important; /* 셀 구분선도 아주 어둡게 */
+        border-bottom: 1px solid #21262d !important;
         color: #ffffff !important;
     }
     [data-testid="stDataFrame"] {
         background-color: #0d1117 !important;
+    }
+    
+    /* [핵심 수정] 표 위의 툴바(검색, 다운로드 등) 숨기기 */
+    [data-testid="stElementToolbar"] {
+        display: none !important;
     }
 
     label, p, span, h1, h2, h3 {
@@ -203,9 +208,7 @@ for i, c_name in enumerate(child_names):
             colors = ['#4ade80' if t <= 37.5 else '#fbbf24' if t < d_limit else '#f87171' for t in f_df['체온']]
             
             fig = go.Figure()
-            fig.add_hrect(y0=34, y1=37.5, fillcolor="#28a745", opacity=0.15, line_width=0)
-            fig.add_hrect(y0=37.5, y1=d_limit, fillcolor="#fd7e14", opacity=0.15, line_width=0)
-            fig.add_hrect(y0=d_limit, y1=42, fillcolor="#dc3545", opacity=0.15, line_width=0)
+            # [핵심 수정] 배경 색상 띠(hrect) 코드 제거 -> 완전한 블랙 배경
             
             fig.add_trace(go.Scatter(x=f_df['축'], y=f_df['체온'], mode='lines+markers+text', line=dict(color='white', width=2), marker=dict(color=colors, size=10, line=dict(color='white', width=1)), text=f_df['체온'], textposition="top center", textfont=dict(color="white", size=11)))
             
@@ -235,8 +238,7 @@ st.subheader("📋 상세 기록")
 edit_mode = st.toggle("🗑️ 기록 삭제/수정 모드 (클릭하여 활성화)", value=False)
 
 def color_rows(row):
-    # [핵심] 배경 제거(None) & 글자 색상(color)으로 변경
-    # 배경은 투명, 글자색만 쨍하게!
+    # 배경 제거 & 글자 색상(color)으로 구분
     styles = {
         "아율": "color: #ff99cc; font-weight: bold;", # 🌸 핑크 텍스트
         "아인": "color: #a3e635; font-weight: bold;", # 🌿 라임 텍스트
