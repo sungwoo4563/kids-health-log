@@ -14,7 +14,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 try:
     df = conn.read(ttl=0)
 except Exception:
-    df = pd.DataFrame(columns=["날짜", "시간", "이름", "체온", "약 종류", "용량", "특이사항"])
+    df = pd.DataFrame(columns=["일시", "이름", "체온", "약 종류", "용량", "특이사항"])
 
 # 4. 입력 폼
 with st.form("health_form", clear_on_submit=True):
@@ -23,9 +23,11 @@ with st.form("health_form", clear_on_submit=True):
     col1, col2 = st.columns(2)
     with col1:
         name = st.selectbox("아이 선택", ["아율", "아인", "혁"])
-        # 날짜와 시간 선택 기능 추가 (현재 시점이 기본값)
-        input_date = st.date_input("날짜", datetime.date.today())
-        input_time = st.time_input("기록 시간 (약 먹인 시간)", datetime.datetime.now().time())
+        # 날짜와 시간을 하나의 입력창으로 관리
+        # 기록하는 시점의 날짜/시간이 기본값
+        recorded_at = st.date_input("날짜 및 시간 선택", datetime.datetime.now())
+        # (참고) Streamlit의 date_input은 기본적으로 날짜만 선택하지만, 
+        # 아래 저장 로직에서 현재 시각과 합쳐서 정교하게 저장합니다.
         
     with col2:
         temp = st.number_input("현재 체온 (℃)", min_value=34.0, max_value=42.0, value=36.5, step=0.1, format="%.1f")
@@ -44,13 +46,12 @@ with st.form("health_form", clear_on_submit=True):
 
 # 5. 저장 로직
 if submit:
-    # 선택한 날짜와 시간을 합쳐서 저장
-    date_str = input_date.strftime("%Y-%m-%d")
-    time_str = input_time.strftime("%H:%M")
+    # 현재 시각의 '분'까지 포함하여 저장
+    now_time = datetime.datetime.now().strftime("%H:%M")
+    full_datetime = f"{recorded_at.strftime('%Y-%m-%d')} {now_time}"
     
     new_data = pd.DataFrame([{
-        "날짜": date_str,
-        "시간": time_str, 
+        "일시": full_datetime, 
         "이름": name, 
         "체온": temp, 
         "약 종류": med_type, 
@@ -64,7 +65,7 @@ if submit:
     # 구글 시트 업데이트
     try:
         conn.update(data=updated_df)
-        st.success(f"✅ {name}의 {time_str} 기록이 저장되었습니다!")
+        st.success(f"✅ {name}의 기록이 저장되었습니다! ({full_datetime})")
         st.rerun()
     except Exception as e:
         st.error("저장에 실패했습니다. 구글 시트 권한을 확인해주세요.")
@@ -73,8 +74,8 @@ if submit:
 st.divider()
 st.subheader("📋 최근 기록 (최신순)")
 if not df.empty:
-    # 날짜와 시간 순으로 정렬해서 보여줌
-    display_df = df.sort_values(by=["날짜", "시간"], ascending=False)
+    # '일시' 기준으로 최신순 정렬
+    display_df = df.sort_values(by="일시", ascending=False)
     st.dataframe(display_df, use_container_width=True, hide_index=True)
 else:
     st.info("기록이 없습니다.")
