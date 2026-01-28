@@ -106,25 +106,22 @@ st.markdown("""
         border: 1px solid #ffffff !important;
         background-color: #0d1117 !important;
     }
-    /* 표 헤더 스타일 */
     [data-testid="stTable"] th {
         background-color: #161b22 !important;
         color: #ffffff !important;
         border-bottom: 2px solid #ffffff !important;
     }
-    /* 표 데이터 셀 스타일 (기본) - 나중에 Python 스타일러로 덮어씌워짐 */
     [data-testid="stTable"] td {
         color: #ffffff !important;
         border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
     }
-    
     label, p, span, [data-testid="stWidgetLabel"] p, h1, h2, h3 {
         color: #ffffff !important;
         font-weight: 700 !important;
     }
     hr { border-color: #ffffff !important; opacity: 0.3 !important; }
 
-    /* 탭(Tab) 텍스트 스타일 */
+    /* 탭(Tab) 스타일 */
     button[data-baseweb="tab"] div p {
         color: #ffffff !important;
         font-weight: bold !important;
@@ -132,9 +129,7 @@ st.markdown("""
     }
     
     /* 수정 모드 토글 스타일 */
-    div[data-testid="stCheckbox"] label span {
-        color: #fbbf24 !important;
-    }
+    div[data-testid="stCheckbox"] label span { color: #fbbf24 !important; }
 
     * { -webkit-tap-highlight-color: transparent !important; }
     </style>
@@ -253,26 +248,26 @@ for i, c_name in enumerate(child_names):
             )
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'scrollZoom': False}, key=f"chart_{c_name}")
 
-# 6. 상세 기록 리스트 (색상 구분 적용)
+# 6. 상세 기록 리스트
 st.divider()
 st.subheader("📋 상세 기록")
 
 edit_mode = st.toggle("🗑️ 기록 삭제/수정 모드 (클릭하여 활성화)", value=False)
 
-# [핵심] 행별 색상 적용 함수
+# [색상 변경 부분] 여기서 색상을 마음대로 바꿀 수 있습니다!
 def color_rows(row):
-    # 은은한 파스텔톤 배경색 (투명도 20%)
+    # RGBA의 마지막 숫자(0.2)가 투명도입니다. 높을수록 진해집니다.
     styles = {
-        "아율": "background-color: rgba(255, 192, 203, 0.2); color: white;", # 은은한 핑크
-        "아인": "background-color: rgba(255, 255, 224, 0.2); color: white;", # 은은한 옐로우
-        "혁":   "background-color: rgba(173, 216, 230, 0.2); color: white;"  # 은은한 블루
+        "아율": "background-color: rgba(219, 39, 119, 0.2); color: white;", # 🌷 로즈 핑크 (차분함)
+        "아인": "background-color: rgba(5, 150, 105, 0.2); color: white;",  # 🌿 세이지 그린 (눈 편함)
+        "혁":   "background-color: rgba(37, 99, 235, 0.2); color: white;"   # 🌊 슬레이트 블루 (묵직함)
     }
     
     name = str(row['이름'])
     if "아율" in name: return [styles["아율"]] * len(row)
     if "아인" in name: return [styles["아인"]] * len(row)
     if "혁" in name:   return [styles["혁"]] * len(row)
-    return ['color: white;'] * len(row) # 기본은 흰색 글씨
+    return ['color: white;'] * len(row)
 
 if not st.session_state.df.empty:
     if edit_mode:
@@ -303,7 +298,6 @@ if not st.session_state.df.empty:
                 if not display_df.empty:
                     show_df = display_df.copy().iloc[::-1]
                     
-                    # 데이터 포맷팅
                     show_df['체온'] = show_df['체온'].apply(lambda x: f"{float(x):.1f}")
                     
                     def format_vol(x):
@@ -315,13 +309,10 @@ if not st.session_state.df.empty:
                     if '용량' in show_df.columns:
                         show_df['용량'] = show_df['용량'].apply(format_vol)
 
-                    # 칼럼 정렬
                     cols_order = ["날짜", "시간", "이름", "체온", "약 종류", "용량", "특이사항"]
                     final_cols = [c for c in cols_order if c in show_df.columns]
                     show_df = show_df[final_cols]
                     
-                    # [적용] 색상 스타일 입히기
-                    # Pandas Styler를 사용해 색상을 입힌 후 st.table로 출력
+                    # 스타일 적용
                     styled_df = show_df.style.apply(color_rows, axis=1)
-                    
                     st.table(styled_df)
