@@ -4,7 +4,7 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 디자인 (그래프 테두리 및 이름표 추가)
+# 1. 페이지 설정 및 디자인 (그래프 중앙 정렬 + 모든 디자인 통합)
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
@@ -15,13 +15,24 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* 2. [핵심 추가] 그래프(Plotly) 테두리 액자 디자인 */
+    /* 2. [핵심 수정] 그래프(Plotly) 테두리 및 중앙 정렬 
+       - display: flex와 justify-content: center로 내부 그래프를 강제 중앙 정렬
+    */
     [data-testid="stPlotlyChart"] {
         border: 2px solid #ffffff !important;
         border-radius: 15px !important;
-        padding: 10px !important;
+        padding: 5px !important; /* 패딩을 약간 줄여서 꽉 차게 */
         background-color: #0d1117 !important;
-        margin-bottom: 10px !important; /* 모바일에서 간격 확보 */
+        margin-bottom: 10px !important;
+        display: flex !important;       /* 플렉스 박스 적용 */
+        justify-content: center !important; /* 가로 중앙 정렬 */
+        align-items: center !important;     /* 세로 중앙 정렬 */
+    }
+    /* 그래프 내부 컨테이너도 꽉 차게 */
+    [data-testid="stPlotlyChart"] > div {
+        width: 100% !important;
+        display: flex !important;
+        justify-content: center !important;
     }
 
     /* 3. 선택창 텍스트 가독성 (흰색 강제) */
@@ -191,18 +202,17 @@ for i, c_name in enumerate(child_names):
             d_limit = 38.0 if c_name == "혁" else 39.0
             colors = ['#4ade80' if t <= 37.5 else '#fbbf24' if t < d_limit else '#f87171' for t in f_df['체온']]
             
-            # [수정] 그래프에 이름표 및 배경 설정 추가
             fig = go.Figure()
             fig.add_hrect(y0=34, y1=37.5, fillcolor="#28a745", opacity=0.15, line_width=0)
             fig.add_hrect(y0=37.5, y1=d_limit, fillcolor="#fd7e14", opacity=0.15, line_width=0)
             fig.add_hrect(y0=d_limit, y1=42, fillcolor="#dc3545", opacity=0.15, line_width=0)
             fig.add_trace(go.Scatter(x=f_df['축'], y=f_df['체온'], mode='lines+markers+text', line=dict(color='white', width=2), marker=dict(color=colors, size=10, line=dict(color='white', width=1)), text=f_df['체온'], textposition="top center", textfont=dict(color="white", size=11)))
             
-            # [이름표 추가] 그래프 상단 제목 설정
+            # [수정] 좌우 여백(l, r)을 15로 똑같이 맞춰서 물리적 중앙 정렬
             fig.update_layout(
                 title=dict(text=f"<b>{c_name}</b>", font=dict(size=18, color="white"), x=0.5, xanchor='center'),
                 height=200, 
-                margin=dict(l=10, r=10, t=40, b=10), # 제목 공간 확보
+                margin=dict(l=15, r=15, t=40, b=10), # 좌우 여백 균일화
                 paper_bgcolor='rgba(0,0,0,0)', 
                 plot_bgcolor='rgba(0,0,0,0)', 
                 showlegend=False, 
