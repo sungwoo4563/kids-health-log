@@ -8,11 +8,12 @@ st.set_page_config(page_title="아율·아인·혁 건강기록", page_icon="�
 st.title("🌡️ 우리 아이 건강 관리")
 
 # 2. 구글 시트 연결
-# 'service_account'라는 키워드를 직접 사용하여 인증 정보를 명시적으로 전달합니다.
+# 라이브러리 버전에 상관없이 가장 안정적인 기본 연결 방식을 사용합니다.
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # 3. 데이터 불러오기
 try:
+    # 실시간 반영을 위해 캐시(ttl)를 0으로 설정
     df = conn.read(ttl=0)
     if df is None or df.empty:
         df = pd.DataFrame(columns=["일시", "이름", "체온", "약 종류", "용량", "특이사항"])
@@ -48,16 +49,16 @@ if submit:
     }
     
     try:
-        # 데이터 추가 및 업데이트 (서비스 계정 권한 사용)
-        updated_df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+        # 새로운 행을 추가하여 업데이트
+        new_data = pd.DataFrame([new_row])
+        updated_df = pd.concat([df, new_data], ignore_index=True)
         conn.update(data=updated_df)
         
         st.success(f"✅ {name}의 기록이 저장되었습니다!")
         st.rerun()
     except Exception as e:
-        # 에러 발생 시 Secrets의 형식을 다시 한번 안내
         st.error(f"❌ 저장 실패: {e}")
-        st.info("Secrets에 service_account = ''' { JSON내용 } ''' 형식이 정확한지 다시 확인해주세요.")
+        st.info("Secrets에 [connections.gsheets] 설정이 잘 되어있는지 확인해주세요.")
 
 # 6. 최근 기록 표시
 st.divider()
