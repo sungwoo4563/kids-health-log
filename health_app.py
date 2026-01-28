@@ -3,29 +3,40 @@ import pandas as pd
 import datetime
 import os
 
-# 1. 페이지 설정 및 디자인 (상태별 카드 배경색 적용)
+# 1. 페이지 설정 및 다크 모드 스타일 디자인
 st.set_page_config(page_title="아율·아인·혁 건강기록", page_icon="🌡️", layout="wide")
 
-# CSS를 사용하여 상태별 배경색 클래스 정의
+# 보여주신 이미지와 유사한 카드 디자인 CSS
 st.markdown("""
     <style>
-    .main { background-color: #ffffff; }
+    .main { background-color: #0e1117; } /* 다크 배경 */
     
-    /* 기본 메트릭 스타일 리셋 */
-    [data-testid="stMetric"] {
-        border: none !important;
-        box-shadow: none !important;
-        padding: 15px !important;
-        border-radius: 12px !important;
+    .status-card {
+        padding: 20px;
+        border-radius: 15px;
+        margin-bottom: 10px;
+        color: white;
+        min-height: 180px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
     }
     
-    /* 상태별 배경색 (투명도 약 10% 적용) */
-    .status-normal { background-color: rgba(40, 167, 69, 0.1) !important; border: 1px solid rgba(40, 167, 69, 0.2) !important; }
-    .status-caution { background-color: rgba(253, 126, 20, 0.1) !important; border: 1px solid rgba(253, 126, 20, 0.2) !important; }
-    .status-danger { background-color: rgba(220, 53, 69, 0.1) !important; border: 1px solid rgba(220, 53, 69, 0.2) !important; }
-
-    [data-testid="stMetricLabel"] { font-size: 1.1rem !important; font-weight: bold !important; color: #333 !important; }
-    [data-testid="stMetricValue"] { font-size: 2.2rem !important; font-weight: 800 !important; }
+    .status-normal { background-color: #1e3a2a; border: 1px solid #2e5a3a; } /* 진한 초록 */
+    .status-caution { background-color: #4a3a1a; border: 1px solid #6a5a2a; } /* 진한 주황 */
+    .status-danger { background-color: #3e1a1a; border: 1px solid #5e2a2a; }  /* 진한 빨강 */
+    
+    .card-header { font-size: 1.1rem; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; gap: 5px; }
+    .card-temp { font-size: 3rem; font-weight: 800; margin: 10px 0; }
+    .card-delta { 
+        font-size: 1rem; 
+        background-color: rgba(255,255,255,0.1); 
+        padding: 4px 10px; 
+        border-radius: 20px; 
+        display: inline-block;
+        width: fit-content;
+    }
+    .card-footer { font-size: 0.85rem; opacity: 0.7; margin-top: 15px; display: flex; align-items: center; gap: 5px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -41,9 +52,9 @@ def save_data(df): df.to_csv(DATA_FILE, index=False, encoding='utf-8-sig')
 
 if 'df' not in st.session_state: st.session_state.df = load_data()
 
-# 3. 입력 폼 (현재 시간 자동 반영)
+# 3. 입력 폼 (접어두기)
 now = datetime.datetime.now()
-with st.expander("➕ 새로운 기록 추가하기", expanded=False):
+with st.expander("📝 새로운 기록 추가하기", expanded=False):
     with st.form("health_form", clear_on_submit=True):
         c1, c2 = st.columns(2)
         with c1: name = st.selectbox("아이 이름", ["아율", "아인", "혁"])
@@ -79,7 +90,7 @@ with st.expander("➕ 새로운 기록 추가하기", expanded=False):
             save_data(st.session_state.df)
             st.rerun()
 
-# 4. 현황 대시보드 (상태별 배경색 적용)
+# 4. 현황 대시보드 (보여주신 이미지 스타일 카드)
 st.subheader("📊 현재 상태 요약")
 cols = st.columns(3)
 child_icons = {"아율": "👧", "아인": "👧", "혁": "👶"}
@@ -92,25 +103,27 @@ for i, c_name in enumerate(["아율", "아인", "혁"]):
             prev_temp = child_df.iloc[-2]['체온'] if len(child_df) > 1 else latest['체온']
             diff = round(latest['체온'] - prev_temp, 1)
             
-            # 상태 및 클래스 결정
+            # 상태에 따른 배경 클래스 및 아이콘
             if latest['체온'] <= 37.5: 
-                status = "🟢 정상"
-                bg_class = "status-normal"
+                status_txt, status_icon, bg_class = "정상", "🟢", "status-normal"
             elif latest['체온'] <= 38.9: 
-                status = "🟠 미열"
-                bg_class = "status-caution"
+                status_txt, status_icon, bg_class = "미열", "🟠", "status-caution"
             else: 
-                status = "🔴 고열"
-                bg_class = "status-danger"
+                status_txt, status_icon, bg_class = "고열", "🔴", "status-danger"
             
-            # 컨테이너를 사용하여 배경색 클래스 입히기
-            st.markdown(f'<div class="{bg_class}">', unsafe_allow_html=True)
-            st.metric(label=f"{child_icons[c_name]} {c_name} | {status}", 
-                      value=f"{latest['체온']}℃", 
-                      delta=f"{diff}℃", 
-                      delta_color="inverse")
-            st.caption(f"🕒 {latest['날짜']} {latest['시간']}")
-            st.markdown('</div>', unsafe_allow_html=True)
+            delta_prefix = "↑" if diff > 0 else "↓" if diff < 0 else ""
+            
+            # HTML 커스텀 카드 렌더링
+            st.markdown(f"""
+                <div class="status-card {bg_class}">
+                    <div>
+                        <div class="card-header">{child_icons[c_name]} {c_name} {status_icon} {status_txt}</div>
+                        <div class="card-temp">{latest['체온']}°C</div>
+                        <div class="card-delta">{delta_prefix} {abs(diff)}°C</div>
+                    </div>
+                    <div class="card-footer">🕒 {latest['날짜']} {latest['시간']}</div>
+                </div>
+                """, unsafe_allow_html=True)
         else:
             st.info(f"{c_name}: 기록 없음")
 
@@ -129,7 +142,7 @@ for i, tab in enumerate(tabs):
     with tab:
         f_df = st.session_state.df if name_filter is None else st.session_state.df[st.session_state.df['이름'] == name_filter]
         if not f_df.empty:
-            st.subheader(f"📈 {name_filter or '전체'} 체온 추이")
+            st.subheader("📈 체온 추이")
             chart_data = f_df.copy()
             chart_data['기록시간'] = chart_data['날짜'] + " " + chart_data['시간']
             st.line_chart(data=chart_data, x='기록시간', y='체온', color="#ff4b4b" if name_filter else "이름")
