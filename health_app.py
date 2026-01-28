@@ -102,14 +102,12 @@ st.markdown("""
     }
 
     /* 9. 표(DataFrame) 스타일 조정 */
-    /* 데이터프레임 헤더 색상 */
     div[data-testid="stDataFrame"] div[role="columnheader"] {
         background-color: #161b22 !important;
         color: #ffffff !important;
         font-weight: bold !important;
         border-bottom: 1px solid #ffffff !important;
     }
-    /* 데이터프레임 셀 텍스트 */
     div[data-testid="stDataFrame"] div[role="gridcell"] {
         color: #ffffff !important;
     }
@@ -246,7 +244,7 @@ for i, c_name in enumerate(child_names):
             )
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'scrollZoom': False}, key=f"chart_{c_name}")
 
-# 6. 상세 기록 리스트 (st.dataframe으로 정렬 문제 해결)
+# 6. 상세 기록 리스트
 st.divider()
 st.subheader("📋 상세 기록")
 
@@ -314,14 +312,14 @@ if not st.session_state.df.empty:
                     final_cols = [c for c in cols_order if c in show_df.columns]
                     show_df = show_df[final_cols]
                     
-                    # [핵심] st.dataframe 사용 (st.table 대체)
-                    # 색상은 style로 적용하고, hide(axis="index")로 번호 숨김
                     styled_df = show_df.style.apply(color_rows, axis=1)
                     
-                    # use_container_width=True로 모바일 화면 꽉 채움
+                    # [핵심 수정] 높이 자동 계산 (35px = 행 높이, 3px = 버퍼)
+                    dynamic_height = (len(show_df) + 1) * 35 + 3
+
                     st.dataframe(
                         styled_df, 
                         use_container_width=True, 
                         hide_index=True,
-                        height=None # 높이 자동 조절
+                        height=dynamic_height # 숫자로 계산된 높이 적용
                     )
