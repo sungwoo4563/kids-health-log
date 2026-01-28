@@ -4,7 +4,7 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 디자인 고도화 (커서 완전 제거 및 단일 테두리)
+# 1. 페이지 설정 및 초강력 CSS (커서 완전 차단 및 단일 테두리)
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
@@ -25,10 +25,16 @@ st.markdown("""
         border: 1px solid #ffffff !important;
         border-radius: 8px !important;
         box-shadow: none !important;
-        /* 커서 및 선택 효과 제거 */
+        
+        /* 커서 및 입력 상태 원천 차단 */
         caret-color: transparent !important; 
-        outline: none !important;
-        user-select: none !important; /* 텍스트 선택 방지 */
+        cursor: pointer !important;
+    }
+
+    /* 선택창(Selectbox) 내부에서 검색 커서가 생기지 않도록 차단 */
+    div[role="combobox"] input {
+        pointer-events: none !important;
+        caret-color: transparent !important;
     }
 
     /* 중복 테두리 현상 해결 (내부 박스 테두리 제거) */
@@ -51,10 +57,9 @@ st.markdown("""
     div[data-cell-contents], .stDataFrame div {
         background-color: transparent !important;
         color: #ffffff !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
 
-    /* 기록 저장 버튼 */
+    /* 기록 저장 버튼 강조 */
     .stButton > button {
         background-color: #238636 !important;
         color: #ffffff !important;
@@ -69,11 +74,6 @@ st.markdown("""
     label, p, span, [data-testid="stWidgetLabel"] p {
         color: #ffffff !important;
         font-weight: bold !important;
-    }
-    
-    /* 탭(Tabs) 글자색 */
-    button[data-baseweb="tab"] p {
-        color: #ffffff !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -100,7 +100,7 @@ with st.expander("📝 새로운 건강 기록 입력", expanded=True):
         with c1: name = st.selectbox("아이 이름", ["아율", "아인", "혁"])
         with c2: d = st.date_input("측정 날짜", now.date())
         
-        st.markdown(f"🕒 **측정 시간** (현재 한국 시각: `{now.strftime('%H:%M')}`)")
+        st.markdown(f"🕒 **측정 시간** (KST: `{now.strftime('%H:%M')}`)")
         t1, t2, t3 = st.columns(3)
         with t1: ampm = st.selectbox("오전/오후", ["오전", "오후"], index=(0 if now.hour < 12 else 1))
         with t2: 
@@ -140,25 +140,7 @@ for i, c_name in enumerate(child_names):
             st.markdown(f'<div style="background-color:{bg}; padding:15px; border:1px solid #ffffff; border-radius:15px; color:white;"><div style="font-weight:bold;">{child_icons[c_name]} {c_name}</div><div style="font-size:2rem; font-weight:800;">{t}°C</div><div style="font-size:0.8rem; opacity:0.8;">🕒 {latest["시간"]}</div></div>', unsafe_allow_html=True)
         else: st.info(f"{c_name}: 기록 없음")
 
-# 5. 아이별 그래프 (Plotly)
-st.subheader("📈 최근 체온 흐름")
-g_cols = st.columns(3)
-for i, c_name in enumerate(child_names):
-    with g_cols[i]:
-        f_df = st.session_state.df[st.session_state.df['이름'] == c_name].tail(7)
-        if not f_df.empty:
-            f_df['축'] = f_df['날짜'].str[3:] + "<br>" + f_df['시간'].str.split(' ').str[-1]
-            d_limit = 38.0 if c_name == "혁" else 39.0
-            colors = ['#4ade80' if t <= 37.5 else '#fbbf24' if t < d_limit else '#f87171' for t in f_df['체온']]
-            fig = go.Figure()
-            fig.add_hrect(y0=34, y1=37.5, fillcolor="#28a745", opacity=0.15, line_width=0)
-            fig.add_hrect(y0=37.5, y1=d_limit, fillcolor="#fd7e14", opacity=0.15, line_width=0)
-            fig.add_hrect(y0=d_limit, y1=42, fillcolor="#dc3545", opacity=0.15, line_width=0)
-            fig.add_trace(go.Scatter(x=f_df['축'], y=f_df['체온'], mode='lines+markers+text', line=dict(color='white', width=2), marker=dict(color=colors, size=10, line=dict(color='white', width=1)), text=f_df['체온'], textposition="top center", textfont=dict(color="white", size=11)))
-            fig.update_layout(height=180, margin=dict(l=5, r=5, t=25, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', showlegend=False, xaxis=dict(showgrid=False, color='white', tickfont=dict(size=9)), yaxis=dict(range=[34, 42], visible=False))
-            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}, key=f"chart_{c_name}")
-
-# 6. 상세 기록 리스트 (배경 제거 완성)
+# 5. 상세 기록 리스트
 st.divider()
 st.subheader("📋 상세 기록")
 if not st.session_state.df.empty:
@@ -168,5 +150,4 @@ if not st.session_state.df.empty:
         with tab:
             display_df = st.session_state.df if n_filter is None else st.session_state.df[st.session_state.df['이름'] == n_filter]
             if not display_df.empty:
-                d_df = display_df.copy().iloc[::-1]
-                st.table(d_df) # table 형식이 배경 제거가 가장 확실합니다.
+                st.table(display_df.iloc[::-1]) # 역순 정렬 표
