@@ -18,113 +18,91 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* 2. 그래프(Plotly) 액자 디자인 */
+    /* 2. 그래프 디자인 - 테두리 제거 및 플랫하게 */
     [data-testid="stPlotlyChart"] {
-        border: 2px solid #ffffff !important;
+        border: none !important;
+        background-color: #161b22 !important;
         border-radius: 15px !important;
         padding: 15px !important;
-        background-color: #0d1117 !important;
         margin-bottom: 15px !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
-        display: flex !important;
-        justify-content: center !important;
-        align-items: center !important;
-    }
-    [data-testid="stPlotlyChart"] > div {
-        width: 100% !important;
-        height: 100% !important;
-        display: flex !important;
-        justify-content: center !important;
-        align-items: center !important;
+        box-shadow: none !important;
     }
 
-    /* 3. 선택창 텍스트 가독성 */
+    /* 3. 선택창 및 입력창 디자인 - 어두운 테두리 */
     div[data-baseweb="select"] span, 
     div[data-baseweb="select"] div {
         color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
         font-weight: 700 !important;
-        opacity: 1 !important;
     }
-    div[data-baseweb="select"] svg { fill: #ffffff !important; }
-
-    /* 4. 커서 박멸 */
     div[data-baseweb="select"] input { opacity: 0 !important; width: 0px !important; }
-    input[type="text"], textarea {
-        color: transparent !important;
-        text-shadow: 0 0 0 #ffffff !important;
-        caret-color: transparent !important;
-        cursor: pointer !important;
-    }
-
-    /* 5. 입력창 디자인 */
+    
     div[data-baseweb="select"], 
     div[data-baseweb="input"], 
     div[data-baseweb="textarea"] {
-        background-color: #0d1117 !important;
-        border: 2px solid #ffffff !important;
+        background-color: #161b22 !important;
+        border: 1px solid #30363d !important; /* 흰색 대신 어두운 회색 */
         border-radius: 8px !important;
     }
-
-    /* 6. 내부 중복 테두리 제거 */
+    
+    input[type="text"], textarea {
+        color: transparent !important;
+        text-shadow: 0 0 0 #ffffff !important;
+    }
+    
     div[data-baseweb="base-input"], 
     div[data-baseweb="select"] > div {
         border: none !important;
         background-color: transparent !important;
     }
 
-    /* 7. 기록 저장 버튼 */
+    /* 4. 기록 저장 버튼 */
     div[data-testid="stFormSubmitButton"] > button {
-        background-color: #0d1117 !important;
+        background-color: #238636 !important;
         color: #ffffff !important;
-        border: 2px solid #ffffff !important;
+        border: none !important;
         font-weight: bold !important;
         border-radius: 8px !important;
     }
-    
-    /* 8. 체온 입력기 통합 테두리 */
+
+    /* 5. 체온 입력기 */
     div[data-testid="stNumberInput"] div[data-baseweb="input"] {
-        background-color: #0d1117 !important;
-        border: 2px solid #ffffff !important;
-        padding-right: 0 !important;
+        background-color: #161b22 !important;
+        border: 1px solid #30363d !important;
     }
     div[data-testid="stNumberInput"] input {
         border: none !important;
-        background-color: #0d1117 !important;
+        background-color: #161b22 !important;
         text-shadow: 0 0 0 #ffffff !important;
         color: transparent !important;
     }
     div[data-testid="stNumberInputStepDown"], 
     div[data-testid="stNumberInputStepUp"] {
-        background-color: #0d1117 !important;
-        border-left: 1px solid rgba(255,255,255,0.3) !important;
+        background-color: #161b22 !important;
+        border-left: 1px solid #30363d !important;
         color: #ffffff !important;
     }
 
-    /* 9. 표(DataFrame) 스타일 조정 */
-    /* 헤더 배경을 진한 검정으로 고정 */
+    /* 6. [핵심 수정] 표(DataFrame) 스타일 - 흰색 라인 제거 */
     div[data-testid="stDataFrame"] div[role="columnheader"] {
         background-color: #161b22 !important;
-        color: #ffffff !important;
+        color: #e6edf3 !important; /* 헤더는 약간 밝은 회색 */
         font-weight: bold !important;
-        border-bottom: 1px solid #ffffff !important;
+        border-bottom: 1px solid #30363d !important; /* 흰색 선 제거 -> 어두운 선 */
     }
-    /* 셀 기본 텍스트 색상 */
     div[data-testid="stDataFrame"] div[role="gridcell"] {
+        border-bottom: 1px solid #21262d !important; /* 셀 구분선도 아주 어둡게 */
         color: #ffffff !important;
     }
-    /* 데이터프레임 전체 배경 강제 어둡게 */
     [data-testid="stDataFrame"] {
         background-color: #0d1117 !important;
     }
-    
-    label, p, span, [data-testid="stWidgetLabel"] p, h1, h2, h3 {
+
+    label, p, span, h1, h2, h3 {
         color: #ffffff !important;
         font-weight: 700 !important;
     }
-    hr { border-color: #ffffff !important; opacity: 0.3 !important; }
+    hr { border-color: #30363d !important; opacity: 1 !important; }
 
-    /* 탭(Tab) 스타일 */
     button[data-baseweb="tab"] div p {
         color: #ffffff !important;
         font-weight: bold !important;
@@ -209,7 +187,7 @@ for i, c_name in enumerate(child_names):
             latest = child_df.iloc[-1]; t = latest["체온"]
             d_limit = 38.0 if c_name == "혁" else 39.0
             bg = "#1e3a2a" if t <= 37.5 else "#4a3a1a" if t < d_limit else "#3e1a1a"
-            st.markdown(f'<div style="background-color:{bg}; padding:15px; border:1px solid #ffffff; border-radius:15px; color:white;"><div style="font-weight:bold;">{CHILD_ICONS[c_name]} {c_name}</div><div style="font-size:2rem; font-weight:800;">{t}°C</div><div style="font-size:0.8rem; opacity:0.8;">🕒 {latest["시간"]}</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="background-color:{bg}; padding:15px; border:1px solid #30363d; border-radius:15px; color:white;"><div style="font-weight:bold;">{CHILD_ICONS[c_name]} {c_name}</div><div style="font-size:2rem; font-weight:800;">{t}°C</div><div style="font-size:0.8rem; opacity:0.8;">🕒 {latest["시간"]}</div></div>', unsafe_allow_html=True)
         else: st.info(f"{CHILD_ICONS[c_name]} {c_name}: 기록 없음")
 
 # 5. 아이별 그래프 (Plotly)
@@ -257,11 +235,12 @@ st.subheader("📋 상세 기록")
 edit_mode = st.toggle("🗑️ 기록 삭제/수정 모드 (클릭하여 활성화)", value=False)
 
 def color_rows(row):
-    # [핵심] 진한 배경색 + 흰색 글씨 = 초고대비 (가독성 최우선)
+    # [핵심] 배경 제거(None) & 글자 색상(color)으로 변경
+    # 배경은 투명, 글자색만 쨍하게!
     styles = {
-        "아율": "background-color: #5e1e33; color: white;", # 🔴 진한 와인색
-        "아인": "background-color: #1e4a2e; color: white;", # 🟢 진한 녹색
-        "혁":   "background-color: #1e3a5e; color: white;"  # 🔵 진한 네이비
+        "아율": "color: #ff99cc; font-weight: bold;", # 🌸 핑크 텍스트
+        "아인": "color: #a3e635; font-weight: bold;", # 🌿 라임 텍스트
+        "혁":   "color: #60a5fa; font-weight: bold;"  # 💧 스카이 블루 텍스트
     }
     name = str(row['이름'])
     if "아율" in name: return [styles["아율"]] * len(row)
@@ -319,10 +298,8 @@ if not st.session_state.df.empty:
                     final_cols = [c for c in cols_order if c in show_df.columns]
                     show_df = show_df[final_cols]
                     
-                    # 스타일 적용
                     styled_df = show_df.style.apply(color_rows, axis=1)
                     
-                    # 높이 자동 계산 (35px = 행 높이, 3px = 버퍼)
                     dynamic_height = (len(show_df) + 1) * 35 + 3
 
                     st.dataframe(
