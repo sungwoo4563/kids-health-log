@@ -101,30 +101,38 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* 9. [핵심 수정] 표(Table) 모바일 최적화 스타일 */
-    [data-testid="stDataFrame"], [data-testid="stTable"], .stDataFrame {
-        border: 1px solid #ffffff !important;
-        background-color: #0d1117 !important;
-        font-size: 0.85rem !important; /* 글자 크기 축소 */
+    /* 9. [핵심 수정] 표(Table) 모바일 최적화 스타일 (강제 적용) */
+    
+    /* 전체 표 폰트 사이즈 축소 및 테두리 설정 */
+    [data-testid="stTable"] {
+        font-size: 13px !important;
+        font-family: 'Pretendard', sans-serif !important;
     }
-    /* 헤더 스타일 */
-    [data-testid="stTable"] th {
+    
+    /* 헤더(맨 윗줄) 스타일 */
+    [data-testid="stTable"] thead th {
         background-color: #161b22 !important;
         color: #ffffff !important;
         border-bottom: 2px solid #ffffff !important;
-        padding: 4px 2px !important; /* 여백 최소화 */
+        padding: 8px 4px !important;
         text-align: center !important;
-        font-size: 0.8rem !important;
-        white-space: nowrap !important; /* 줄바꿈 방지 */
+        white-space: nowrap !important; /* 줄바꿈 절대 금지 */
     }
+    
     /* 데이터 셀 스타일 */
-    [data-testid="stTable"] td {
+    [data-testid="stTable"] tbody td {
         color: #ffffff !important;
         border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
-        padding: 4px 2px !important; /* 여백 최소화 */
+        padding: 6px 4px !important; /* 여백을 줄여서 빡빡하게 */
         text-align: center !important;
-        font-size: 0.8rem !important;
+        white-space: nowrap !important; /* 줄바꿈 절대 금지 (한 줄 유지) */
         vertical-align: middle !important;
+    }
+
+    /* [필살기] 첫 번째 컬럼(인덱스 번호) 숨기기 */
+    [data-testid="stTable"] thead th:first-child,
+    [data-testid="stTable"] tbody td:first-child {
+        display: none !important;
     }
     
     label, p, span, [data-testid="stWidgetLabel"] p, h1, h2, h3 {
@@ -282,7 +290,7 @@ if not st.session_state.df.empty:
     if edit_mode:
         st.info("💡 행을 선택하고 Delete 키를 누르거나, 휴지통 아이콘을 눌러 삭제하세요.")
         editor_df = st.session_state.df.copy()
-        # [수정] nan 제거
+        # [수정] nan 제거 및 텍스트 정리
         editor_df = editor_df.fillna("")
         
         cols_order = ["날짜", "시간", "이름", "체온", "약 종류", "용량", "특이사항"]
@@ -310,10 +318,14 @@ if not st.session_state.df.empty:
                 if not display_df.empty:
                     show_df = display_df.copy().iloc[::-1]
                     
-                    # [수정] nan을 빈 문자열로 변경
-                    show_df = show_df.fillna("-")
+                    # [수정] 데이터 클리닝: nan -> 빈칸
+                    show_df = show_df.fillna("") # 하이픈(-) 대신 완전 빈칸으로 처리해서 깔끔하게
+                    
+                    # "선택 안 함" 텍스트도 너무 기니까 빈칸으로 날리기
+                    if '약 종류' in show_df.columns:
+                        show_df['약 종류'] = show_df['약 종류'].replace("선택 안 함", "")
 
-                    show_df['체온'] = show_df['체온'].apply(lambda x: f"{float(x):.1f}")
+                    show_df['체온'] = show_df['체온'].apply(lambda x: f"{float(x):.1f}" if x else "")
                     
                     def format_vol(x):
                         try:
@@ -328,6 +340,6 @@ if not st.session_state.df.empty:
                     final_cols = [c for c in cols_order if c in show_df.columns]
                     show_df = show_df[final_cols]
                     
-                    # 스타일 적용 + 인덱스 숨기기(hide)
+                    # 스타일 적용 + 인덱스 숨기기(hide) -> CSS로도 숨기고 여기서도 숨김(이중 잠금)
                     styled_df = show_df.style.apply(color_rows, axis=1).hide(axis="index")
                     st.table(styled_df)
