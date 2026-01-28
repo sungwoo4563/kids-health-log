@@ -13,7 +13,8 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 # 3. 데이터 불러오기
 try:
-    df = conn.read(ttl="0s")
+    # 실시간 반영을 위해 캐시를 0으로 설정
+    df = conn.read(ttl=0)
     if df is None or df.empty:
         df = pd.DataFrame(columns=["일시", "이름", "체온", "약 종류", "용량", "특이사항"])
 except Exception:
@@ -48,22 +49,27 @@ if submit:
     }
     
     try:
-        # 데이터 추가 및 업데이트
-        updated_df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+        # 새로운 데이터 한 줄 생성
+        new_data = pd.DataFrame([new_row])
+        # 기존 데이터에 추가하여 업데이트
+        updated_df = pd.concat([df, new_data], ignore_index=True)
         conn.update(data=updated_df)
         
         st.success(f"✅ {name}의 기록이 저장되었습니다!")
         st.rerun()
     except Exception as e:
         st.error(f"❌ 저장 실패: {e}")
-        st.info("Secrets의 JSON 형식이 올바른지, 시트에 서비스 계정이 편집자로 초대됐는지 확인해주세요.")
+        st.info("Secrets의 형식이 올바른지, 시트에 서비스 계정이 편집자로 초대됐는지 다시 확인해주세요.")
 
 # 6. 최근 기록 표시
 st.divider()
 st.subheader("📋 최근 기록 (최신순)")
 if not df.empty:
+    # '일시' 컬럼이 있는 경우에만 정렬 실행
     if "일시" in df.columns:
         display_df = df.sort_values(by="일시", ascending=False)
     else:
         display_df = df
     st.dataframe(display_df, use_container_width=True, hide_index=True)
+else:
+    st.info("아직 기록이 없습니다.")
