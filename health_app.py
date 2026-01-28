@@ -4,102 +4,100 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 디자인 고도화 (강력한 CSS 초기화)
+# 1. 페이지 설정 및 디자인 (스마트 텍스트 반전 & 테두리 복구)
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
     <style>
-    /* 전체 배경 강제 다크 고정 */
+    /* 1. 메인 화면 배경(검정) 및 기본 텍스트(흰색) */
     .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
         background-color: #0d1117 !important;
         color: #ffffff !important;
     }
 
-    /* [핵심] 모든 입력창의 브라우저 기본 스타일 초기화 */
-    input, textarea, select {
-        -webkit-appearance: none !important;
-        -moz-appearance: none !important;
-        appearance: none !important;
-        background-color: transparent !important;
-        background: transparent !important;
-    }
-
-    /* Streamlit 컴포넌트 강제 투명화 */
+    /* 2. 입력창 디자인 (테두리 복구 및 배경색 제어) */
+    /* 기본적으로 입력창의 배경은 투명, 테두리는 흰색으로 설정 */
     div[data-baseweb="select"], 
     div[data-baseweb="input"], 
-    div[data-baseweb="base-input"], 
     div[data-baseweb="textarea"] {
-        background-color: transparent !important;
-        border: 1px solid #ffffff !important; 
+        background-color: transparent !important; 
+        border: 2px solid #ffffff !important; /* 두께 2px로 강화 */
         border-radius: 8px !important;
-        box-shadow: none !important;
     }
 
-    /* 입력창 내부 요소들의 배경 제거 (흰색 잔상 원인) */
-    div[data-baseweb="select"] > div,
-    div[data-baseweb="base-input"] > div,
-    .stSelectbox div, .stNumberInput div, .stTextInput div {
-        background-color: transparent !important;
-        border: none !important;
-    }
-
-    /* 커서 및 텍스트 선택 방지 */
-    input, textarea, [contenteditable="true"], div[role="combobox"] {
-        caret-color: transparent !important;
-        color: transparent !important;
-        text-shadow: 0 0 0 #ffffff !important;
-        cursor: pointer !important;
+    /* 3. [핵심] 텍스트 색상 스마트 반전 */
+    /* 입력창 내부의 텍스트는 기본적으로 흰색 */
+    input, textarea, div[data-baseweb="select"] span {
+        color: #ffffff !important; 
+        -webkit-text-fill-color: #ffffff !important;
+        font-weight: 600 !important;
     }
     
-    /* 텍스트 색상 강제 */
-    input, textarea, div[data-baseweb="select"] span {
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
-        font-weight: 500 !important;
+    /* 4. 하지만, 브라우저가 강제로 흰색 배경을 까는 경우(Light Mode)를 대비해
+       입력창에 포커스가 가거나 값이 선택되었을 때의 스타일을 강제합니다. */
+    
+    /* 선택창(Selectbox)의 드롭다운 메뉴(Popover) 스타일 */
+    ul[data-baseweb="menu"], div[role="listbox"] {
+        background-color: #ffffff !important; /* 메뉴 배경은 흰색 */
+    }
+    /* 드롭다운 메뉴 안의 글자색은 검정색 */
+    li[role="option"] span, li[role="option"] div {
+        color: #000000 !important; 
     }
 
-    /* 기록 저장 버튼 배경 제거 */
+    /* 5. 내부 요소 중복 테두리 제거 */
+    div[data-baseweb="base-input"], 
+    div[data-baseweb="select"] > div {
+        border: none !important;
+        background-color: transparent !important;
+    }
+
+    /* 6. 기록 저장 버튼 디자인 (투명 배경 + 흰색 테두리 + 흰색 글씨) */
     div[data-testid="stFormSubmitButton"] > button {
         background-color: transparent !important;
         color: #ffffff !important;
-        border: 1px solid #ffffff !important;
+        border: 2px solid #ffffff !important; /* 테두리 강화 */
         font-weight: bold !important;
-        box-shadow: none !important;
-        text-shadow: none !important;
+        border-radius: 8px !important;
+        height: 3.5em !important;
     }
-
-    /* 상세 기록 표 배경 제거 */
-    [data-testid="stDataFrame"], [data-testid="stTable"], .stDataFrame {
-        background-color: transparent !important;
-        border: 1px solid #ffffff !important;
+    
+    /* 7. 체온 입력기(Number Input) 테두리 및 버튼 */
+    div[data-testid="stNumberInput"] div[data-baseweb="input"] {
+        border: 2px solid #ffffff !important; /* 전체 테두리 */
+        padding-right: 0 !important;
     }
-    [data-testid="stTable"] td, [data-testid="stTable"] th {
-        background-color: transparent !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
-    }
-
-    /* 숫자 입력기(+/-) 내부 흰색 배경 제거 */
-    div[data-testid="stNumberInput"] {
-        background-color: transparent !important;
-    }
-    div[data-testid="stNumberInput"] > div {
+    div[data-testid="stNumberInput"] input {
         border: none !important;
     }
-    /* +/- 버튼 자체 스타일 */
+    /* +/- 버튼 */
     div[data-testid="stNumberInputStepDown"], 
     div[data-testid="stNumberInputStepUp"] {
         background-color: transparent !important;
-        border: 1px solid rgba(255,255,255,0.3) !important;
+        border-left: 1px solid rgba(255,255,255,0.3) !important;
         color: #ffffff !important;
+    }
+
+    /* 8. 상세 기록 표 스타일 (흰색 테두리 + 흰색 글씨) */
+    [data-testid="stDataFrame"], [data-testid="stTable"], .stDataFrame {
+        border: 1px solid #ffffff !important;
+        background-color: transparent !important;
+    }
+    [data-testid="stTable"] td, [data-testid="stTable"] th {
+        color: #ffffff !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
     }
     
-    /* 입력 섹션 박스(Expander) 배경 제거 */
-    .stExpander {
-        background-color: transparent !important;
-        border: 1px solid #ffffff !important;
+    /* 9. 라벨(제목) 텍스트는 무조건 흰색 */
+    label, p, span, [data-testid="stWidgetLabel"] p {
         color: #ffffff !important;
+        font-weight: bold !important;
     }
-    .stExpander p { color: #ffffff !important; }
+
+    /* 10. 커서 박멸 (유지) */
+    input, textarea { caret-color: transparent !important; }
+    /* 검색창 입력 방지 (커서 생성 차단) */
+    div[data-baseweb="select"] input { opacity: 0 !important; width: 1px !important; }
     
     </style>
     """, unsafe_allow_html=True)
@@ -203,5 +201,6 @@ if not st.session_state.df.empty:
         with tab:
             display_df = st.session_state.df if n_filter is None else st.session_state.df[st.session_state.df['이름'] == n_filter]
             if not display_df.empty:
-                d_df = display_df.copy().iloc[::-1]
-                st.table(d_df)
+                show_df = display_df.copy().iloc[::-1]
+                show_df['체온'] = show_df['체온'].apply(lambda x: f"{float(x):.1f}")
+                st.table(show_df)
