@@ -3,23 +3,39 @@ import pandas as pd
 import datetime
 import os
 
-# 1. 페이지 설정 및 디자인
+# 1. 페이지 설정 및 디자인 (배경 제거 및 텍스트 강조)
 st.set_page_config(page_title="아율·아인·혁 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
     <style>
-    .main { background-color: #f0f2f6; }
+    /* 메인 배경색 설정 */
+    .main { background-color: #ffffff; }
+    
+    /* 상태 요약 카드 배경 및 테두리 제거 */
     [data-testid="stMetric"] {
-        background-color: #ffffff;
-        border: 1px solid #dee2e6;
-        padding: 20px;
-        border-radius: 15px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0px !important;
     }
+    
+    /* 메트릭 텍스트 가독성 보강 */
+    [data-testid="stMetricLabel"] { 
+        font-size: 1.1rem !important; 
+        font-weight: bold !important; 
+        color: #333 !important; 
+    }
+    [data-testid="stMetricValue"] { 
+        font-size: 2.2rem !important; 
+        font-weight: 800 !important;
+    }
+    
+    /* 구분선 스타일 */
+    hr { margin-top: 1rem; margin-bottom: 1rem; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🌡️ 우리 아이 건강 관리 & 차트")
+st.title("🌡️ 우리 아이 건강 관리 센터")
 
 # 2. 데이터 로드
 DATA_FILE = "health_data.csv"
@@ -69,7 +85,7 @@ with st.expander("➕ 새로운 기록 추가하기", expanded=False):
             save_data(st.session_state.df)
             st.rerun()
 
-# 4. 현황 대시보드
+# 4. 현황 대시보드 (배경 없는 투명 스타일)
 st.subheader("📊 현재 상태 요약")
 cols = st.columns(3)
 child_icons = {"아율": "👧", "아인": "👧", "혁": "👶"}
@@ -82,12 +98,25 @@ for i, c_name in enumerate(["아율", "아인", "혁"]):
             prev_temp = child_df.iloc[-2]['체온'] if len(child_df) > 1 else latest['체온']
             diff = round(latest['체온'] - prev_temp, 1)
             status = "🟢 정상" if latest['체온'] <= 37.5 else "🟠 미열" if latest['체온'] <= 38.9 else "🔴 고열"
-            st.metric(label=f"{child_icons[c_name]} {c_name} | {status}", value=f"{latest['체온']}℃", delta=f"{diff}℃", delta_color="inverse")
-        else: st.info(f"{c_name}: 기록 없음")
+            
+            # 투명한 배경에 텍스트와 수치만 강조
+            st.metric(label=f"{child_icons[c_name]} {c_name} | {status}", 
+                      value=f"{latest['체온']}℃", 
+                      delta=f"{diff}℃", 
+                      delta_color="inverse")
+            st.caption(f"🕒 {latest['날짜']} {latest['시간']}")
+        else:
+            st.info(f"{c_name}: 기록 없음")
 
 # 5. 아이별 탭 & 그래프
 st.divider()
 tabs = st.tabs(["📋 전체", "💖 아율", "💛 아인", "💙 혁"])
+
+def style_temp(val):
+    if val <= 37.5: color = '#28a745'
+    elif val <= 38.9: color = '#fd7e14'
+    else: color = '#dc3545'
+    return f'color: {color}; font-weight: bold;'
 
 for i, tab in enumerate(tabs):
     name_filter = [None, "아율", "아인", "혁"][i]
@@ -95,29 +124,19 @@ for i, tab in enumerate(tabs):
         f_df = st.session_state.df if name_filter is None else st.session_state.df[st.session_state.df['이름'] == name_filter]
         
         if not f_df.empty:
-            # --- 그래프 섹션 ---
-            st.subheader(f"📈 {name_filter or '전체'} 체온 변화 추이")
-            # 그래프를 위한 데이터 정리 (날짜+시간을 하나의 축으로)
+            st.subheader(f"📈 {name_filter or '전체'} 체온 추이")
             chart_data = f_df.copy()
             chart_data['기록시간'] = chart_data['날짜'] + " " + chart_data['시간']
-            
-            # 꺾은선 그래프 출력
             st.line_chart(data=chart_data, x='기록시간', y='체온', color="#ff4b4b" if name_filter else "이름")
             
-            # --- 표 섹션 ---
             st.subheader("📄 상세 기록")
             csv = f_df.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
             st.download_button(f"📥 {name_filter or '전체'} 엑셀 받기", csv, f"{name_filter or 'all'}.csv", "text/csv", key=f"dl_{i}")
             
             d_df = f_df.copy()
             d_df.insert(0, '선택', False)
-            
-            # 글자색 스타일 함수
-            def style_temp(val):
-                color = '#28a745' if val <= 37.5 else '#fd7e14' if val <= 38.9 else '#dc3545'
-                return f'color: {color}; font-weight: bold;'
-            
             styled = d_df.iloc[::-1].style.map(style_temp, subset=['체온'])
+            
             edited = st.data_editor(styled, hide_index=True, use_container_width=True, key=f"ed_{i}",
                                    column_config={"선택": st.column_config.CheckboxColumn("삭제", default=False)})
             
