@@ -62,7 +62,6 @@ if submit:
 st.divider()
 st.subheader("📋 최근 기록 (최신순)")
 if not df.empty:
-    # 일시 컬럼이 존재할 때만 정렬
     if "일시" in df.columns:
         display_df = df.sort_values(by="일시", ascending=False)
     else:
