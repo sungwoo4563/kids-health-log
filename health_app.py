@@ -4,36 +4,53 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 디자인 고도화 (Outline 스타일 적용)
+# 1. 페이지 설정 및 디자인 고도화 (강력한 다크 모드 고정 및 커서 제거)
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
     <style>
-    /* 전체 배경을 깊은 다크톤으로 고정 */
-    .stApp { 
-        background-color: #0d1117 !important; 
-        color: #e6edf3 !important; 
+    /* 전체 배경 강제 고정 */
+    .stApp, [data-testid="stAppViewContainer"] {
+        background-color: #0d1117 !important;
+        color: #e6edf3 !important;
     }
-    
-    /* [핵심] 모든 입력창을 측정날짜처럼 테두리 스타일로 변경 */
-    input, select, textarea, div[role="combobox"], div[data-baseweb="select"] {
-        background-color: transparent !important; /* 배경을 투명하게 */
-        color: #ffffff !important; /* 글자는 흰색 */
-        border: 1px solid #4e5d6c !important; /* 테두리는 은은한 회색선 */
+
+    /* 모든 입력창의 흰색 배경 제거 및 테두리 스타일 강제 적용 */
+    div[data-baseweb="select"], 
+    div[data-baseweb="input"], 
+    div[data-baseweb="textarea"],
+    input, textarea, select {
+        background-color: transparent !important;
+        background: transparent !important;
+        color: #ffffff !important;
+        border: 1px solid #4e5d6c !important;
         border-radius: 8px !important;
-        caret-color: transparent !important; /* 커서 숨기기 */
     }
 
-    /* 포커스 되었을 때 테두리 색상 강조 (영상 편집기 활성창 느낌) */
-    input:focus, div[data-baseweb="select"]:focus {
-        border-color: #58a6ff !important;
-        box-shadow: 0 0 0 1px #58a6ff !important;
+    /* 입력창 내부의 배경색까지 추적하여 제거 */
+    div[data-baseweb="select"] > div, 
+    div[data-baseweb="base-input"] {
+        background-color: transparent !important;
     }
 
-    /* 라벨 및 텍스트 색상 고정 */
-    label, p, span, .stMarkdown { color: #e6edf3 !important; font-weight: 500 !important; }
+    /* 커서(Caret) 박멸 */
+    input, textarea, [contenteditable="true"] {
+        caret-color: transparent !important;
+    }
 
-    /* 입력 섹션 테두리 */
+    /* 드롭다운 리스트(선택 팝업) 가독성 */
+    div[role="listbox"] {
+        background-color: #161b22 !important;
+        color: #ffffff !important;
+    }
+
+    /* 라벨 및 텍스트 시인성 */
+    label, p, span, .stMarkdown, [data-testid="stWidgetLabel"] p {
+        color: #e6edf3 !important;
+        font-weight: 500 !important;
+    }
+
+    /* 입력 섹션 박스 스타일 */
     .stExpander {
         border: 1px solid #30363d !important;
         border-radius: 12px !important;
@@ -44,11 +61,14 @@ st.markdown("""
     .status-card {
         padding: 15px; border-radius: 15px; margin-bottom: 10px; color: white !important;
         min-height: 160px; display: flex; flex-direction: column; justify-content: space-between;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
     .status-normal { background-color: #1e3a2a !important; border: 1px solid #2e5a3a; }
     .status-caution { background-color: #4a3a1a !important; border: 1px solid #6a5a2a; }
     .status-danger { background-color: #3e1a1a !important; border: 1px solid #5e2a2a; }
     
+    .card-temp { color: #ffffff !important; font-weight: 800; }
+
     /* 버튼 스타일 */
     .stButton > button {
         background-color: #238636 !important;
