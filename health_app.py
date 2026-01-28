@@ -3,7 +3,7 @@ import pandas as pd
 import datetime
 import os
 
-# 1. 페이지 설정 및 디자인
+# 1. 페이지 설정 및 다크 테마 디자인
 st.set_page_config(page_title="아율·아인·혁 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
@@ -26,7 +26,7 @@ st.markdown("""
 
 st.title("🌡️ 우리 아이 건강 관리 센터")
 
-# 2. 데이터 로드 및 저장
+# 2. 데이터 관리 함수
 DATA_FILE = "health_data.csv"
 def load_data():
     if os.path.exists(DATA_FILE): return pd.read_csv(DATA_FILE)
@@ -36,7 +36,7 @@ def save_data(df): df.to_csv(DATA_FILE, index=False, encoding='utf-8-sig')
 
 if 'df' not in st.session_state: st.session_state.df = load_data()
 
-# 3. 입력 폼 (기존 유지)
+# 3. 입력 폼
 now = datetime.datetime.now()
 with st.expander("📝 새로운 기록 추가하기", expanded=False):
     with st.form("health_form", clear_on_submit=True):
@@ -49,15 +49,12 @@ with st.expander("📝 새로운 기록 추가하기", expanded=False):
         st.write("🕒 복용 시간")
         t_col1, t_col2, t_col3 = st.columns(3)
         with t_col1:
-            ampm_idx = 0 if now.hour < 12 else 1
-            ampm = st.selectbox("오전/오후", ["오전", "오후"], index=ampm_idx)
+            ampm = st.selectbox("오전/오후", ["오전", "오후"], index=(0 if now.hour < 12 else 1))
         with t_col2:
-            h12 = now.hour % 12
-            h12 = 12 if h12 == 0 else h12
+            h12 = 12 if now.hour % 12 == 0 else now.hour % 12
             hour = st.selectbox("시", [i for i in range(1, 13)], index=h12-1)
         with t_col3:
-            m_idx = (now.minute // 5)
-            minute = st.selectbox("분", [f"{i:02d}" for i in range(0, 60, 5)], index=m_idx)
+            minute = st.selectbox("분", [f"{i:02d}" for i in range(0, 60, 5)], index=(now.minute // 5))
         
         f_time = f"{ampm} {hour}:{minute}"
 
@@ -73,7 +70,7 @@ with st.expander("📝 새로운 기록 추가하기", expanded=False):
             save_data(st.session_state.df)
             st.rerun()
 
-# 4. 현황 대시보드
+# 4. 현황 대시보드 (아이별 맞춤 기준)
 st.subheader("📊 현재 상태 요약")
 cols = st.columns(3)
 child_names = ["아율", "아인", "혁"]
@@ -88,28 +85,35 @@ for i, c_name in enumerate(child_names):
             prev_temp = child_df.iloc[-2]['체온'] if len(child_df) > 1 else t
             diff = round(t - prev_temp, 1)
             
-            # 혁이(영유아)와 누나들의 고열 기준 분리
-            danger_limit = 38.0 if c_name == "혁" else 39.0
-            caution_limit = 37.5
-
-            if t <= caution_limit: st_txt, st_icon, bg = "정상", "🟢", "status-normal"
-            elif t < danger_limit: st_txt, st_icon, bg = "미열", "🟠", "status-caution"
+            # 고열 기준 설정 (혁이: 38.0, 나머지: 39.0)
+            d_limit = 38.0 if c_name == "혁" else 39.0
+            
+            if t <= 37.5: st_txt, st_icon, bg = "정상", "🟢", "status-normal"
+            elif t < d_limit: st_txt, st_icon, bg = "미열", "🟠", "status-caution"
             else: st_txt, st_icon, bg = "고열", "🔴", "status-danger"
-
+            
             delta_prefix = "↑" if diff > 0 else "↓" if diff < 0 else ""
             st.markdown(f'<div class="status-card {bg}"><div><div class="card-header">{child_icons[c_name]} {c_name} {st_icon} {st_txt}</div><div class="card-temp">{t}°C</div><div class="card-delta">{delta_prefix} {abs(diff)}°C</div></div><div class="card-footer">🕒 {latest["날짜"]} {latest["시간"]}</div></div>', unsafe_allow_html=True)
         else: st.info(f"{c_name}: 기록 없음")
 
-# 5. 아이별 그래프 (배경색 영역 추가)
-st.subheader("📈 최근 체온 흐름 (상태별 배경 영역)")
+# 5. 아이별 그래프 (배경색 + 포인트 컬러 연동)
+st.subheader("📈 최근 체온 흐름 (상태별 색상 연동)")
 g_cols = st.columns(3)
 
-def prepare_chart_data(df):
+def prepare_chart_data(df, name):
     if df.empty: return df
     chart_df = df.tail(7).copy()
     chart_df['심플날짜'] = chart_df['날짜'].str.split('.').str[1:].str.join('.') + "일"
     chart_df['심플시간'] = chart_df['시간'].str.split(' ').str[-1]
     chart_df['시간축'] = chart_df[['심플날짜', '심플시간']].values.tolist()
+    
+    # 포인트 색상 로직 추가
+    limit = 38.0 if name == "혁" else 39.0
+    def get_color(t):
+        if t <= 37.5: return '#28a745'
+        elif t < limit: return '#fd7e14'
+        else: return '#dc3545'
+    chart_df['색상'] = chart_df['체온'].apply(get_color)
     return chart_df
 
 for i, c_name in enumerate(child_names):
@@ -117,33 +121,56 @@ for i, c_name in enumerate(child_names):
         f_df = st.session_state.df[st.session_state.df['이름'] == c_name]
         if not f_df.empty:
             st.markdown(f"**{child_icons[c_name]} {c_name}**")
-            chart_data = prepare_chart_data(f_df)
-            
-            # 아이별 고열 기준선 설정
+            c_data = prepare_chart_data(f_df, c_name)
             d_limit = 38.0 if c_name == "혁" else 39.0
             
-            st.vega_lite_chart(chart_data, {
+            st.vega_lite_chart(c_data, {
                 'height': 220,
                 'layer': [
-                    # 1. 배경 영역 (정상/미열/고열)
-                    {'mark': {'type': 'rect', 'opacity': 0.1, 'color': '#28a745'}, 'encoding': {'y': {'datum': 30}, 'y2': {'datum': 37.5}}}, # 정상
-                    {'mark': {'type': 'rect', 'opacity': 0.1, 'color': '#fd7e14'}, 'encoding': {'y': {'datum': 37.5}, 'y2': {'datum': d_limit}}}, # 미열
-                    {'mark': {'type': 'rect', 'opacity': 0.1, 'color': '#dc3545'}, 'encoding': {'y': {'datum': d_limit}, 'y2': {'datum': 42}}}, # 고열
+                    # 1. 배경 영역 레이어
+                    {'mark': {'type': 'rect', 'opacity': 0.1, 'color': '#28a745'}, 'encoding': {'y': {'datum': 30}, 'y2': {'datum': 37.5}}},
+                    {'mark': {'type': 'rect', 'opacity': 0.1, 'color': '#fd7e14'}, 'encoding': {'y': {'datum': 37.5}, 'y2': {'datum': d_limit}}},
+                    {'mark': {'type': 'rect', 'opacity': 0.1, 'color': '#dc3545'}, 'encoding': {'y': {'datum': d_limit}, 'y2': {'datum': 42}}},
                     
-                    # 2. 꺾은선 + 포인트
-                    {'mark': {'type': 'line', 'point': {'size': 80, 'color': 'white'}, 'color': 'white', 'strokeWidth': 3},
+                    # 2. 꺾은선 (흰색)
+                    {'mark': {'type': 'line', 'color': 'white', 'strokeWidth': 2, 'opacity': 0.5},
                      'encoding': {'x': {'field': '시간축', 'type': 'nominal', 'axis': {'title': None, 'labelAngle': 0}},
                                    'y': {'field': '체온', 'type': 'quantitative', 'scale': {'domain': [30, 42]}, 'axis': None}}},
                     
-                    # 3. 텍스트 라벨
-                    {'mark': {'type': 'text', 'dy': -15, 'fontSize': 13, 'fontWeight': 'bold', 'color': 'white'},
+                    # 3. 포인트 (체온별 색상 적용)
+                    {'mark': {'type': 'point', 'size': 120, 'filled': True, 'opacity': 1},
+                     'encoding': {
+                         'x': {'field': '시간축', 'type': 'nominal'},
+                         'y': {'field': '체온', 'type': 'quantitative'},
+                         'color': {'field': '색상', 'type': 'nominal', 'scale': None} # 데이터의 색상값을 직접 사용
+                     }},
+                    
+                    # 4. 텍스트 라벨
+                    {'mark': {'type': 'text', 'dy': -18, 'fontSize': 14, 'fontWeight': 'bold', 'color': 'white'},
                      'encoding': {'x': {'field': '시간축', 'type': 'nominal'}, 'y': {'field': '체온', 'type': 'quantitative'},
                                    'text': {'field': '체온', 'type': 'quantitative', 'format': '.1f'}}}
                 ], 'config': {'view': {'stroke': 'transparent'}}
             }, use_container_width=True)
         else: st.info(f"{c_name} 데이터 없음")
 
-# 6. 상세 기록 탭 (기존 유지)
+# 6. 상세 기록 탭
 st.divider()
 tabs = st.tabs(["📋 전체 기록", "💖 아율", "💛 아인", "💙 혁"])
-# ... [이후 코드 생략]
+
+for i, tab in enumerate(tabs):
+    n_filter = [None, "아율", "아인", "혁"][i]
+    with tab:
+        f_df = st.session_state.df if n_filter is None else st.session_state.df[st.session_state.df['이름'] == n_filter]
+        if not f_df.empty:
+            d_df = f_df.copy().iloc[::-1]
+            d_df.insert(0, '선택', False)
+            def style_temp(val):
+                color = '#28a745' if val <= 37.5 else '#fd7e14' if val <= 38.9 else '#dc3545'
+                return f'color: {color}; font-weight: bold;'
+            edited = st.data_editor(d_df.style.map(style_temp, subset=['체온']), hide_index=True, use_container_width=True, key=f"ed_{i}", column_config={"선택": st.column_config.CheckboxColumn("삭제")})
+            if st.button("🗑️ 선택 항목 삭제", key=f"del_{i}"):
+                to_del = edited[edited['선택'] == True]
+                for _, r in to_del.iterrows():
+                    st.session_state.df = st.session_state.df[~((st.session_state.df['날짜'] == r['날짜']) & (st.session_state.df['시간'] == r['시간']) & (st.session_state.df['이름'] == (r['이름'] if n_filter is None else n_filter)))]
+                save_data(st.session_state.df)
+                st.rerun()
