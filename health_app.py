@@ -4,29 +4,34 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 초정밀 CSS (테두리 겹침 방지 및 배경 박멸)
+# 1. 페이지 설정 및 디자인 고도화 (커서 완전 제거 및 단일 테두리)
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
     <style>
-    /* 전체 배경 및 텍스트 고정 */
+    /* 전체 배경 및 텍스트 강제 다크 고정 */
     .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
         background-color: #0d1117 !important;
         color: #ffffff !important;
     }
 
-    /* [핵심] 모든 입력창의 배경 제거 및 단일 테두리 적용 */
+    /* [핵심] 모든 입력창의 배경 제거 및 단일 흰색 테두리 */
     div[data-baseweb="select"], div[data-baseweb="input"], 
     div[data-baseweb="base-input"], div[data-baseweb="textarea"],
     input, textarea, select {
         background-color: transparent !important;
+        background: transparent !important;
         color: #ffffff !important;
         border: 1px solid #ffffff !important;
         border-radius: 8px !important;
-        box-shadow: none !important; /* 겹쳐 보이는 그림자 제거 */
+        box-shadow: none !important;
+        /* 커서 및 선택 효과 제거 */
+        caret-color: transparent !important; 
+        outline: none !important;
+        user-select: none !important; /* 텍스트 선택 방지 */
     }
 
-    /* 입력창 내부 중복 테두리 및 배경 제거 */
+    /* 중복 테두리 현상 해결 (내부 박스 테두리 제거) */
     div[data-baseweb="select"] > div, 
     div[data-baseweb="base-input"] > div,
     .stSelectbox div, .stNumberInput div, .stTextInput div {
@@ -34,34 +39,19 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* 커서 제거 */
-    input, textarea, [contenteditable="true"], div[role="combobox"] {
-        caret-color: transparent !important;
-    }
-
-    /* [중요] 상세기록 표(DataFrame) 배경 박멸 및 단일 테두리 */
+    /* 상세 기록 표(DataFrame) 배경 박멸 및 단일 테두리 */
     [data-testid="stDataFrame"], [data-testid="stTable"], .stDataFrame {
         background-color: transparent !important;
         border: 1px solid #ffffff !important;
         border-radius: 10px !important;
     }
-    
-    /* 표 내부의 모든 셀 배경 투명화 */
-    div[data-testid="stTable"] td, div[data-testid="stTable"] th, 
-    div[data-cell-contents] {
-        background-color: transparent !important;
-        background: transparent !important;
-        color: #ffffff !important;
-    }
 
-    /* 탭(Tabs) 디자인 최적화 */
-    button[data-baseweb="tab"] {
+    /* 표 내부 셀 배경 완전 투명화 */
+    [data-testid="stTable"] td, [data-testid="stTable"] th, 
+    div[data-cell-contents], .stDataFrame div {
         background-color: transparent !important;
         color: #ffffff !important;
-        border: none !important;
-    }
-    button[data-baseweb="tab"][aria-selected="true"] {
-        border-bottom: 2px solid #ffffff !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
 
     /* 기록 저장 버튼 */
@@ -72,12 +62,18 @@ st.markdown("""
         font-weight: bold !important;
         border-radius: 8px !important;
         height: 3.5em !important;
+        width: 100% !important;
     }
 
-    /* 라벨 텍스트 */
+    /* 라벨 강조 */
     label, p, span, [data-testid="stWidgetLabel"] p {
         color: #ffffff !important;
         font-weight: bold !important;
+    }
+    
+    /* 탭(Tabs) 글자색 */
+    button[data-baseweb="tab"] p {
+        color: #ffffff !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -119,7 +115,7 @@ with st.expander("📝 새로운 건강 기록 입력", expanded=True):
         with c5: vol = st.text_input("💉 용량", placeholder="예: 5ml")
         note = st.text_area("🗒️ 특이사항")
 
-        if st.form_submit_button("💾 기록 저장", use_container_width=True):
+        if st.form_submit_button("💾 기록 저장"):
             f_date = d.strftime("%y.%m.%d")
             f_time = f"{ampm} {hour}:{minute}"
             new_row = {"날짜": f_date, "시간": f_time, "이름": name, "체온": temp, "약 종류": med, "용량": vol, "특이사항": note}
@@ -141,10 +137,10 @@ for i, c_name in enumerate(child_names):
             latest = child_df.iloc[-1]; t = latest["체온"]
             d_limit = 38.0 if c_name == "혁" else 39.0
             bg = "#1e3a2a" if t <= 37.5 else "#4a3a1a" if t < d_limit else "#3e1a1a"
-            st.markdown(f'<div style="background-color:{bg}; padding:15px; border:1px solid #ffffff; border-radius:15px; color:white;"><div style="font-weight:bold;">{child_icons[c_name]} {c_name}</div><div style="font-size:2.2rem; font-weight:800;">{t}°C</div><div style="font-size:0.8rem; opacity:0.8;">🕒 {latest["시간"]}</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="background-color:{bg}; padding:15px; border:1px solid #ffffff; border-radius:15px; color:white;"><div style="font-weight:bold;">{child_icons[c_name]} {c_name}</div><div style="font-size:2rem; font-weight:800;">{t}°C</div><div style="font-size:0.8rem; opacity:0.8;">🕒 {latest["시간"]}</div></div>', unsafe_allow_html=True)
         else: st.info(f"{c_name}: 기록 없음")
 
-# 5. 아이별 그래프
+# 5. 아이별 그래프 (Plotly)
 st.subheader("📈 최근 체온 흐름")
 g_cols = st.columns(3)
 for i, c_name in enumerate(child_names):
@@ -162,9 +158,9 @@ for i, c_name in enumerate(child_names):
             fig.update_layout(height=180, margin=dict(l=5, r=5, t=25, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', showlegend=False, xaxis=dict(showgrid=False, color='white', tickfont=dict(size=9)), yaxis=dict(range=[34, 42], visible=False))
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}, key=f"chart_{c_name}")
 
-# 6. 상세 기록 (표 디자인 보정)
+# 6. 상세 기록 리스트 (배경 제거 완성)
 st.divider()
-st.subheader("📋 상세 기록 리스트")
+st.subheader("📋 상세 기록")
 if not st.session_state.df.empty:
     tabs = st.tabs(["전체", "💖 아율", "💛 아인", "💙 혁"])
     for i, tab in enumerate(tabs):
@@ -173,5 +169,4 @@ if not st.session_state.df.empty:
             display_df = st.session_state.df if n_filter is None else st.session_state.df[st.session_state.df['이름'] == n_filter]
             if not display_df.empty:
                 d_df = display_df.copy().iloc[::-1]
-                # 표 가독성을 위한 인덱스 제거 및 스타일 적용
-                st.table(d_df) # data_editor 대신 단순 table 사용 시 배경 제거가 더 완벽합니다.
+                st.table(d_df) # table 형식이 배경 제거가 가장 확실합니다.
