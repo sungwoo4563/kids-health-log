@@ -4,73 +4,81 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 디자인 (스마트 텍스트 반전 & 테두리 복구)
+# 1. 페이지 설정 및 디자인 (스마트 텍스트 반전 적용)
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
     <style>
-    /* 1. 메인 화면 배경(검정) 및 기본 텍스트(흰색) */
+    /* 1. 기본 다크 모드 설정 */
     .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
         background-color: #0d1117 !important;
         color: #ffffff !important;
     }
 
-    /* 2. 입력창 디자인 (테두리 복구 및 배경색 제어) */
-    /* 기본적으로 입력창의 배경은 투명, 테두리는 흰색으로 설정 */
+    /* 2. 입력창 기본 스타일 (평소 상태) */
     div[data-baseweb="select"], 
     div[data-baseweb="input"], 
     div[data-baseweb="textarea"] {
         background-color: transparent !important; 
-        border: 2px solid #ffffff !important; /* 두께 2px로 강화 */
+        border: 2px solid #ffffff !important; 
         border-radius: 8px !important;
     }
 
-    /* 3. [핵심] 텍스트 색상 스마트 반전 */
-    /* 입력창 내부의 텍스트는 기본적으로 흰색 */
+    /* 3. [핵심] 텍스트 색상 스마트 제어 */
+    /* 기본 상태: 흰색 텍스트 */
     input, textarea, div[data-baseweb="select"] span {
-        color: #ffffff !important; 
+        color: #ffffff !important;
         -webkit-text-fill-color: #ffffff !important;
         font-weight: 600 !important;
     }
-    
-    /* 4. 하지만, 브라우저가 강제로 흰색 배경을 까는 경우(Light Mode)를 대비해
-       입력창에 포커스가 가거나 값이 선택되었을 때의 스타일을 강제합니다. */
-    
-    /* 선택창(Selectbox)의 드롭다운 메뉴(Popover) 스타일 */
-    ul[data-baseweb="menu"], div[role="listbox"] {
-        background-color: #ffffff !important; /* 메뉴 배경은 흰색 */
+
+    /* [솔루션] 입력창을 눌렀거나(Focus), 값이 채워졌을 때(Autofill) 
+       브라우저가 흰색 배경을 강제하면 글자색을 검은색으로 변경 */
+    input:focus, textarea:focus, select:focus,
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover, 
+    input:-webkit-autofill:focus, 
+    input:-webkit-autofill:active {
+        -webkit-text-fill-color: #000000 !important;
+        color: #000000 !important;
+        background-color: #ffffff !important; /* 입력 중엔 배경을 확실히 흰색으로 */
+        font-weight: 700 !important;
+        transition: background-color 5000s ease-in-out 0s; /* 배경색 변경 지연 트릭 (선택사항) */
     }
-    /* 드롭다운 메뉴 안의 글자색은 검정색 */
+
+    /* 선택창(Selectbox) 드롭다운 메뉴 스타일 */
+    ul[data-baseweb="menu"], div[role="listbox"] {
+        background-color: #ffffff !important;
+    }
     li[role="option"] span, li[role="option"] div {
         color: #000000 !important; 
     }
 
-    /* 5. 내부 요소 중복 테두리 제거 */
+    /* 4. 내부 요소 스타일 정리 */
     div[data-baseweb="base-input"], 
     div[data-baseweb="select"] > div {
         border: none !important;
         background-color: transparent !important;
     }
 
-    /* 6. 기록 저장 버튼 디자인 (투명 배경 + 흰색 테두리 + 흰색 글씨) */
+    /* 5. 기록 저장 버튼 */
     div[data-testid="stFormSubmitButton"] > button {
         background-color: transparent !important;
         color: #ffffff !important;
-        border: 2px solid #ffffff !important; /* 테두리 강화 */
+        border: 2px solid #ffffff !important;
         font-weight: bold !important;
         border-radius: 8px !important;
         height: 3.5em !important;
     }
     
-    /* 7. 체온 입력기(Number Input) 테두리 및 버튼 */
+    /* 6. 체온 입력기 스타일 */
     div[data-testid="stNumberInput"] div[data-baseweb="input"] {
-        border: 2px solid #ffffff !important; /* 전체 테두리 */
+        border: 2px solid #ffffff !important;
         padding-right: 0 !important;
     }
     div[data-testid="stNumberInput"] input {
         border: none !important;
     }
-    /* +/- 버튼 */
     div[data-testid="stNumberInputStepDown"], 
     div[data-testid="stNumberInputStepUp"] {
         background-color: transparent !important;
@@ -78,7 +86,7 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* 8. 상세 기록 표 스타일 (흰색 테두리 + 흰색 글씨) */
+    /* 7. 상세 기록 표 스타일 */
     [data-testid="stDataFrame"], [data-testid="stTable"], .stDataFrame {
         border: 1px solid #ffffff !important;
         background-color: transparent !important;
@@ -88,15 +96,14 @@ st.markdown("""
         border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
     }
     
-    /* 9. 라벨(제목) 텍스트는 무조건 흰색 */
+    /* 8. 라벨 텍스트 */
     label, p, span, [data-testid="stWidgetLabel"] p {
         color: #ffffff !important;
         font-weight: bold !important;
     }
 
-    /* 10. 커서 박멸 (유지) */
-    input, textarea { caret-color: transparent !important; }
-    /* 검색창 입력 방지 (커서 생성 차단) */
+    /* 9. 커서 설정 (입력 시엔 커서가 보여야 입력 가능하므로 일부 복구) */
+    /* 검색창 입력 방지는 유지하되, 일반 입력창은 보이게 */
     div[data-baseweb="select"] input { opacity: 0 !important; width: 1px !important; }
     
     </style>
