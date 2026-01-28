@@ -4,39 +4,56 @@ import datetime
 import os
 import plotly.graph_objects as go
 
-# 1. 페이지 설정 및 가독성 강화 CSS (라이트/다크 통합)
+# 1. 페이지 설정 및 가독성 극대화 CSS (강제 다크 테마)
 st.set_page_config(page_title="우리 아이 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
     <style>
-    /* 배경색과 텍스트 대비 강화 */
-    .stApp { background-color: #0e1117; color: white; }
-    
-    /* 입력 섹션 스타일 */
-    .stExpander {
-        border: 2px solid #4e5d6c !important;
-        border-radius: 12px !important;
-        background-color: #161b22 !important;
-        color: white !important;
+    /* 전체 배경을 깊은 다크톤으로 고정 */
+    .stApp { 
+        background-color: #0d1117 !important; 
+        color: #e6edf3 !important; 
     }
     
-    /* 상태 카드 (라이트 모드에서도 색상 유지) */
+    /* 입력창 배경 및 글자색 강제 설정 (라이트 모드 방지) */
+    input, select, textarea, div[role="listbox"] {
+        background-color: #21262d !important;
+        color: #ffffff !important;
+        border: 1px solid #30363d !important;
+    }
+
+    /* 선택된 텍스트와 라벨 가독성 강화 */
+    label, p, span, .stMarkdown {
+        color: #e6edf3 !important;
+        font-weight: 500 !important;
+    }
+
+    /* 기록 입력창(Expander) 테두리와 배경 강조 */
+    .stExpander {
+        border: 2px solid #30363d !important;
+        border-radius: 12px !important;
+        background-color: #161b22 !important;
+    }
+
+    /* 상태 카드 디자인 보정 */
     .status-card {
         padding: 15px; border-radius: 15px; margin-bottom: 10px; color: white !important;
         min-height: 160px; display: flex; flex-direction: column; justify-content: space-between;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
     .status-normal { background-color: #1e3a2a !important; border: 1px solid #2e5a3a; }
     .status-caution { background-color: #4a3a1a !important; border: 1px solid #6a5a2a; }
     .status-danger { background-color: #3e1a1a !important; border: 1px solid #5e2a2a; }
     
-    .card-header { font-size: 1.1rem; font-weight: bold; opacity: 0.9; }
-    .card-temp { font-size: 2.8rem; font-weight: 800; margin: 5px 0; color: white !important; }
-    .card-delta { font-size: 0.9rem; background-color: rgba(255,255,255,0.15); padding: 3px 8px; border-radius: 15px; }
-    .card-footer { font-size: 0.8rem; opacity: 0.7; color: white !important; }
+    .card-temp { color: #ffffff !important; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
     
-    /* 상세 기록 표 가독성 */
-    div[data-testid="stExpanderDetails"] { color: white !important; }
+    /* 버튼 가독성 */
+    .stButton > button {
+        background-color: #238636 !important;
+        color: white !important;
+        border: none !important;
+        font-weight: bold !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -56,7 +73,7 @@ def save_data(df):
 if 'df' not in st.session_state:
     st.session_state.df = load_data()
 
-# 3. 퀵 기록 센터 (KST 반영 및 시/분 복구)
+# 3. 퀵 기록 센터 (KST 반영)
 now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
 with st.expander("📝 새로운 건강 기록 입력 (클릭)", expanded=True):
     with st.form("health_form", clear_on_submit=True):
@@ -64,7 +81,7 @@ with st.expander("📝 새로운 건강 기록 입력 (클릭)", expanded=True):
         with c1: name = st.selectbox("아이 이름", ["아율", "아인", "혁"])
         with c2: d = st.date_input("측정 날짜", now.date())
         
-        st.write(f"🕒 측정 시간 (현재 한국 시각: {now.strftime('%H:%M')})")
+        st.markdown(f"🕒 **측정 시간** (현재 한국 시각: `{now.strftime('%H:%M')}`)")
         t1, t2, t3 = st.columns(3)
         with t1: ampm = st.selectbox("오전/오후", ["오전", "오후"], index=(0 if now.hour < 12 else 1))
         with t2: 
@@ -79,14 +96,6 @@ with st.expander("📝 새로운 건강 기록 입력 (클릭)", expanded=True):
         with c5: vol = st.text_input("💉 용량", placeholder="예: 5ml")
         note = st.text_area("🗒️ 특이사항")
 
-        child_history = st.session_state.df[st.session_state.df['이름'] == name]
-        if not child_history.empty and med in ["맥시부펜", "세토펜"]:
-            med_history = child_history[child_history['약 종류'] != "선택 안 함"]
-            if not med_history.empty:
-                last_med = med_history.iloc[-1]['약 종류']
-                if last_med == med:
-                    st.warning(f"⚠️ 주의: {name}가 마지막으로 복용한 약도 **{last_med}**입니다!")
-        
         if st.form_submit_button("💾 기록 저장", use_container_width=True):
             f_date = d.strftime("%y.%m.%d")
             f_time = f"{ampm} {hour}:{minute}"
@@ -118,7 +127,7 @@ for i, c_name in enumerate(child_names):
             st.markdown(f'<div class="status-card {bg}"><div><div class="card-header">{child_icons[c_name]} {c_name} | {icon} {txt}</div><div class="card-temp">{t}°C</div><div class="card-delta">{diff_text}</div></div><div class="card-footer">🕒 {latest["날짜"]} {latest["시간"]}</div></div>', unsafe_allow_html=True)
         else: st.info(f"{c_name}: 기록 없음")
 
-# 5. 아이별 그래프 (Plotly - 대비 강화)
+# 5. 아이별 그래프 (Plotly)
 st.subheader("📈 최근 체온 흐름")
 g_cols = st.columns(3)
 for i, c_name in enumerate(child_names):
@@ -128,34 +137,17 @@ for i, c_name in enumerate(child_names):
             f_df['축'] = f_df['날짜'].str[3:] + "<br>" + f_df['시간'].str.split(' ').str[-1]
             d_limit = 38.0 if c_name == "혁" else 39.0
             colors = ['#4ade80' if t <= 37.5 else '#fbbf24' if t < d_limit else '#f87171' for t in f_df['체온']]
-            
             fig = go.Figure()
-            # 배경 영역 대비 강화
             fig.add_hrect(y0=34, y1=37.5, fillcolor="#28a745", opacity=0.15, line_width=0)
             fig.add_hrect(y0=37.5, y1=d_limit, fillcolor="#fd7e14", opacity=0.15, line_width=0)
             fig.add_hrect(y0=d_limit, y1=42, fillcolor="#dc3545", opacity=0.15, line_width=0)
-            
-            fig.add_trace(go.Scatter(
-                x=f_df['축'], y=f_df['체온'],
-                mode='lines+markers+text',
-                line=dict(color='rgba(255,255,255,0.8)', width=3),
-                marker=dict(color=colors, size=14, line=dict(color='white', width=2)),
-                text=f_df['체온'], textposition="top center",
-                textfont=dict(color="white", size=14, family="Arial Black")
-            ))
-
-            fig.update_layout(
-                height=220, margin=dict(l=10, r=10, t=30, b=10),
-                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                showlegend=False,
-                xaxis=dict(showgrid=False, color='white', tickfont=dict(size=10, color='white')),
-                yaxis=dict(range=[34, 42], showgrid=False, visible=False)
-            )
+            fig.add_trace(go.Scatter(x=f_df['축'], y=f_df['체온'], mode='lines+markers+text', line=dict(color='white', width=2.5), marker=dict(color=colors, size=12, line=dict(color='white', width=1.5)), text=f_df['체온'], textposition="top center", textfont=dict(color="white", size=13)))
+            fig.update_layout(height=220, margin=dict(l=5, r=5, t=25, b=5), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', showlegend=False, xaxis=dict(showgrid=False, color='white', tickfont=dict(size=9)), yaxis=dict(range=[34, 42], visible=False))
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}, key=f"chart_{c_name}")
 
-# 6. 상세 기록 리스트
+# 6. 상세 기록
 st.divider()
-st.subheader("📋 상세 기록")
+st.subheader("📋 상세 기록 리스트")
 if not st.session_state.df.empty:
     tabs = st.tabs(["전체", "💖 아율", "💛 아인", "💙 혁"])
     for i, tab in enumerate(tabs):
@@ -168,13 +160,5 @@ if not st.session_state.df.empty:
                 def style_temp(val):
                     limit = 38.0 if n_filter == "혁" else 39.0
                     color = '#4ade80' if val <= 37.5 else '#fbbf24' if val < limit else '#f87171'
-                    return f'color: {color}; font-weight: bold; font-size: 1.1em;'
-                
-                edited = st.data_editor(d_df.style.map(style_temp, subset=['체온']), hide_index=True, use_container_width=True, key=f"ed_{i}", column_config={"선택": st.column_config.CheckboxColumn("삭제")})
-                if st.button(f"🗑️ 선택 삭제", key=f"del_{i}"):
-                    to_del = edited[edited['선택'] == True]
-                    for _, r in to_del.iterrows():
-                        tn = r['이름'] if n_filter is None else n_filter
-                        st.session_state.df = st.session_state.df[~((st.session_state.df['날짜'] == r['날짜']) & (st.session_state.df['시간'] == r['시간']) & (st.session_state.df['이름'] == tn))]
-                    save_data(st.session_state.df)
-                    st.rerun()
+                    return f'color: {color}; font-weight: bold;'
+                st.data_editor(d_df.style.map(style_temp, subset=['체온']), hide_index=True, use_container_width=True, key=f"ed_{i}")
