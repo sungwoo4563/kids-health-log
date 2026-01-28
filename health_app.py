@@ -101,20 +101,32 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* 9. 표 및 라벨 스타일 */
+    /* 9. [핵심 수정] 표(Table) 모바일 최적화 스타일 */
     [data-testid="stDataFrame"], [data-testid="stTable"], .stDataFrame {
         border: 1px solid #ffffff !important;
         background-color: #0d1117 !important;
+        font-size: 0.85rem !important; /* 글자 크기 축소 */
     }
+    /* 헤더 스타일 */
     [data-testid="stTable"] th {
         background-color: #161b22 !important;
         color: #ffffff !important;
         border-bottom: 2px solid #ffffff !important;
+        padding: 4px 2px !important; /* 여백 최소화 */
+        text-align: center !important;
+        font-size: 0.8rem !important;
+        white-space: nowrap !important; /* 줄바꿈 방지 */
     }
+    /* 데이터 셀 스타일 */
     [data-testid="stTable"] td {
         color: #ffffff !important;
         border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+        padding: 4px 2px !important; /* 여백 최소화 */
+        text-align: center !important;
+        font-size: 0.8rem !important;
+        vertical-align: middle !important;
     }
+    
     label, p, span, [data-testid="stWidgetLabel"] p, h1, h2, h3 {
         color: #ffffff !important;
         font-weight: 700 !important;
@@ -254,15 +266,12 @@ st.subheader("📋 상세 기록")
 
 edit_mode = st.toggle("🗑️ 기록 삭제/수정 모드 (클릭하여 활성화)", value=False)
 
-# [색상 변경 부분] 여기서 색상을 마음대로 바꿀 수 있습니다!
 def color_rows(row):
-    # RGBA의 마지막 숫자(0.2)가 투명도입니다. 높을수록 진해집니다.
     styles = {
-        "아율": "background-color: rgba(219, 39, 119, 0.2); color: white;", # 🌷 로즈 핑크 (차분함)
-        "아인": "background-color: rgba(5, 150, 105, 0.2); color: white;",  # 🌿 세이지 그린 (눈 편함)
-        "혁":   "background-color: rgba(37, 99, 235, 0.2); color: white;"   # 🌊 슬레이트 블루 (묵직함)
+        "아율": "background-color: rgba(219, 39, 119, 0.2); color: white;", 
+        "아인": "background-color: rgba(5, 150, 105, 0.2); color: white;",  
+        "혁":   "background-color: rgba(37, 99, 235, 0.2); color: white;"   
     }
-    
     name = str(row['이름'])
     if "아율" in name: return [styles["아율"]] * len(row)
     if "아인" in name: return [styles["아인"]] * len(row)
@@ -273,6 +282,9 @@ if not st.session_state.df.empty:
     if edit_mode:
         st.info("💡 행을 선택하고 Delete 키를 누르거나, 휴지통 아이콘을 눌러 삭제하세요.")
         editor_df = st.session_state.df.copy()
+        # [수정] nan 제거
+        editor_df = editor_df.fillna("")
+        
         cols_order = ["날짜", "시간", "이름", "체온", "약 종류", "용량", "특이사항"]
         final_cols = [c for c in cols_order if c in editor_df.columns]
         editor_df = editor_df[final_cols]
@@ -298,6 +310,9 @@ if not st.session_state.df.empty:
                 if not display_df.empty:
                     show_df = display_df.copy().iloc[::-1]
                     
+                    # [수정] nan을 빈 문자열로 변경
+                    show_df = show_df.fillna("-")
+
                     show_df['체온'] = show_df['체온'].apply(lambda x: f"{float(x):.1f}")
                     
                     def format_vol(x):
@@ -313,6 +328,6 @@ if not st.session_state.df.empty:
                     final_cols = [c for c in cols_order if c in show_df.columns]
                     show_df = show_df[final_cols]
                     
-                    # 스타일 적용
-                    styled_df = show_df.style.apply(color_rows, axis=1)
+                    # 스타일 적용 + 인덱스 숨기기(hide)
+                    styled_df = show_df.style.apply(color_rows, axis=1).hide(axis="index")
                     st.table(styled_df)
