@@ -3,7 +3,7 @@ import pandas as pd
 import datetime
 import os
 
-# 1. 페이지 설정 및 다크 모드 스타일
+# 1. 페이지 설정 및 디자인
 st.set_page_config(page_title="아율·아인·혁 건강기록", page_icon="🌡️", layout="wide")
 
 st.markdown("""
@@ -26,7 +26,7 @@ st.markdown("""
 
 st.title("🌡️ 우리 아이 건강 관리 센터")
 
-# 2. 데이터 로드
+# 2. 데이터 로드 및 저장 함수
 DATA_FILE = "health_data.csv"
 def load_data():
     if os.path.exists(DATA_FILE): return pd.read_csv(DATA_FILE)
@@ -36,7 +36,7 @@ def save_data(df): df.to_csv(DATA_FILE, index=False, encoding='utf-8-sig')
 
 if 'df' not in st.session_state: st.session_state.df = load_data()
 
-# 3. 입력 폼 (생략 - 기존 유지)
+# 3. 입력 폼 (현재 시간 자동 세팅)
 now = datetime.datetime.now()
 with st.expander("📝 새로운 기록 추가하기", expanded=False):
     with st.form("health_form", clear_on_submit=True):
@@ -93,15 +93,14 @@ for i, c_name in enumerate(child_names):
             st.markdown(f'<div class="status-card {bg}"><div><div class="card-header">{child_icons[c_name]} {c_name} {st_icon} {st_txt}</div><div class="card-temp">{latest["체온"]}°C</div><div class="card-delta">{delta_prefix} {abs(diff)}°C</div></div><div class="card-footer">🕒 {latest["날짜"]} {latest["시간"]}</div></div>', unsafe_allow_html=True)
         else: st.info(f"{c_name}: 기록 없음")
 
-# 5. 아이별 그래프 (세로축 제거 & 시간만 표시)
-st.subheader("📈 최근 체온 흐름")
+# 5. 아이별 그래프 (수치 텍스트 표시 버전)
+st.subheader("📈 최근 체온 흐름 (포인트 수치 표시)")
 g_cols = st.columns(3)
 
 def prepare_chart_data(df):
     if df.empty: return df
-    # 최근 10개만, 시간 표시를 '10:30'처럼 아주 짧게 가공
-    chart_df = df.tail(10).copy()
-    chart_df['시간축'] = chart_df['시간'].str.split(' ').str[-1] # '오전 10:30' -> '10:30'
+    chart_df = df.tail(8).copy() # 너무 많으면 겹치므로 최근 8개만
+    chart_df['시간축'] = chart_df['시간'].str.split(' ').str[-1]
     return chart_df
 
 for i, c_name in enumerate(child_names):
@@ -111,14 +110,28 @@ for i, c_name in enumerate(child_names):
             st.markdown(f"**{child_icons[c_name]} {c_name}**")
             chart_data = prepare_chart_data(f_df)
             
-            # 세로축 숫자 제거를 위해 vega_lite 사용
+            # 수치 표시를 위한 Vega-Lite 레이어드 차트
             st.vega_lite_chart(chart_data, {
-                'height': 200,
-                'mark': {'type': 'line', 'point': {'size': 60, 'color': '#ff4b4b'}, 'color': '#ff4b4b', 'strokeWidth': 3},
-                'encoding': {
-                    'x': {'field': '시간축', 'type': 'nominal', 'axis': {'title': None, 'labelAngle': 0, 'grid': False}},
-                    'y': {'field': '체온', 'type': 'quantitative', 'scale': {'domain': [30, 42]}, 'axis': None}, # 세로축 제거
-                },
+                'height': 220,
+                'layer': [
+                    # 1. 꺾은선 + 포인트
+                    {
+                        'mark': {'type': 'line', 'point': {'size': 80, 'color': '#ff4b4b'}, 'color': '#ff4b4b', 'strokeWidth': 3},
+                        'encoding': {
+                            'x': {'field': '시간축', 'type': 'nominal', 'axis': {'title': None, 'labelAngle': 0}},
+                            'y': {'field': '체온', 'type': 'quantitative', 'scale': {'domain': [30, 42]}, 'axis': None}
+                        }
+                    },
+                    # 2. 텍스트 라벨 (온도)
+                    {
+                        'mark': {'type': 'text', 'dy': -15, 'fontSize': 13, 'fontWeight': 'bold', 'color': 'white'},
+                        'encoding': {
+                            'x': {'field': '시간축', 'type': 'nominal'},
+                            'y': {'field': '체온', 'type': 'quantitative'},
+                            'text': {'field': '체온', 'type': 'quantitative', 'format': '.1f'}
+                        }
+                    }
+                ],
                 'config': {'view': {'stroke': 'transparent'}}
             }, use_container_width=True)
         else:
@@ -127,4 +140,4 @@ for i, c_name in enumerate(child_names):
 # 6. 상세 기록 탭
 st.divider()
 tabs = st.tabs(["📋 전체 기록", "💖 아율", "💛 아인", "💙 혁"])
-# ... [이전 상세 기록 코드 유지]
+# ... (삭제 기능 포함된 상세 기록 코드는 동일)
